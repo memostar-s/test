@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>國中刷題系統</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Sora:wght@400;600;800&display=swap');
+
+  :root {
+    --bg: #f0f4ff;
+    --surface: #ffffff;
+    --surface2: #f8faff;
+    --primary: #4361ee;
+    --primary-light: #eef0fd;
+    --primary-dark: #2d47c7;
+    --success: #10b981;
+    --success-light: #d1fae5;
+    --error: #ef4444;
+    --error-light: #fee2e2;
+    --warn: #f59e0b;
+    --text: #1e1e2e;
+    --text-muted: #64748b;
+    --border: #e2e8f0;
+    --shadow: 0 4px 24px rgba(67,97,238,0.10);
+    --shadow-lg: 0 12px 48px rgba(67,97,238,0.16);
+    --radius: 18px;
+    --radius-sm: 10px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* ── Header ── */
+  .app-header {
+    width: 100%;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(67,97,238,0.06);
+  }
+  .app-logo {
+    font-family: 'Sora', sans-serif;
+    font-weight: 800;
+    font-size: 1.15rem;
+    color: var(--primary);
+    letter-spacing: -0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .app-logo-icon { font-size: 1.3rem; }
+  .header-actions { display: flex; gap: 10px; }
+  .btn-ghost {
+    background: none;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 7px 14px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Noto Sans TC', sans-serif;
+  }
+  .btn-ghost:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+  .badge {
+    background: var(--error);
+    color: white;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    padding: 1px 7px;
+    margin-left: 4px;
+    font-weight: 700;
+  }
+
+  /* ── Main Container ── */
+  .container {
+    width: 100%;
+    max-width: 560px;
+    padding: 28px 16px 60px;
+  }
+
+  /* ── Screen transitions ── */
+  .screen { display: none; animation: fadeUp 0.35s ease; }
+  .screen.active { display: block; }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Card ── */
+  .card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 28px 24px;
+    box-shadow: var(--shadow);
+    margin-bottom: 16px;
+    border: 1px solid rgba(67,97,238,0.07);
+  }
+
+  /* ── Setup Screen ── */
+  .setup-hero {
+    text-align: center;
+    padding: 16px 0 24px;
+  }
+  .setup-hero-emoji { font-size: 3.2rem; line-height: 1; margin-bottom: 12px; }
+  .setup-hero h1 {
+    font-family: 'Sora', sans-serif;
+    font-size: 1.55rem;
+    font-weight: 800;
+    color: var(--primary);
+    margin-bottom: 6px;
+  }
+  .setup-hero p { color: var(--text-muted); font-size: 0.9rem; }
+
+  .form-group { margin-bottom: 18px; }
+  .form-label {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+  .form-select {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 0.95rem;
+    font-family: 'Noto Sans TC', sans-serif;
+    background: var(--surface2);
+    color: var(--text);
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .form-select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(67,97,238,0.12); }
+
+  .slider-row { display: flex; align-items: center; gap: 14px; }
+  .slider-val {
+    min-width: 40px;
+    text-align: center;
+    font-family: 'Sora', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--primary);
+  }
+  input[type=range] {
+    flex: 1;
+    appearance: none;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--border);
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    appearance: none;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--primary);
+    box-shadow: 0 2px 8px rgba(67,97,238,0.35);
+    cursor: grab;
+  }
+  .q-count-hint { font-size: 0.78rem; color: var(--text-muted); margin-top: 6px; }
+
+  .mode-toggle { display: flex; gap: 10px; margin-bottom: 6px; }
+  .mode-btn {
+    flex: 1;
+    padding: 11px 8px;
+    border-radius: var(--radius-sm);
+    border: 2px solid var(--border);
+    background: var(--surface2);
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    font-family: 'Noto Sans TC', sans-serif;
+  }
+  .mode-btn.active {
+    border-color: var(--primary);
+    background: var(--primary-light);
+    color: var(--primary);
+  }
+
+  .btn-primary {
+    width: 100%;
+    padding: 16px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 1.05rem;
+    font-weight: 700;
+    font-family: 'Noto Sans TC', sans-serif;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+  }
+  .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(67,97,238,0.3); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* ── Upload area ── */
+  .upload-area {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius-sm);
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--surface2);
+    position: relative;
+  }
+  .upload-area:hover { border-color: var(--primary); background: var(--primary-light); }
+  .upload-area input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .upload-area-icon { font-size: 1.8rem; margin-bottom: 6px; }
+  .upload-area-text { font-size: 0.85rem; color: var(--text-muted); font-weight: 500; }
+  .upload-area-text strong { color: var(--primary); }
+  .upload-status { margin-top: 8px; font-size: 0.82rem; }
+  .upload-status.ok { color: var(--success); }
+  .upload-status.err { color: var(--error); }
+
+  /* ── Quiz Screen ── */
+  .quiz-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .quiz-tag {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--primary);
+    background: var(--primary-light);
+    padding: 4px 12px;
+    border-radius: 20px;
+  }
+  .quiz-counter {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+
+  .progress-bar {
+    height: 5px;
+    background: var(--border);
+    border-radius: 3px;
+    margin-bottom: 22px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), #7b8cde);
+    border-radius: 3px;
+    transition: width 0.4s ease;
+  }
+
+  .quiz-question {
+    font-size: 1.05rem;
+    font-weight: 500;
+    line-height: 1.7;
+    margin-bottom: 24px;
+    color: var(--text);
+  }
+
+  .options-list { display: flex; flex-direction: column; gap: 10px; }
+  .option-btn {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    border-radius: var(--radius-sm);
+    border: 2px solid var(--border);
+    background: var(--surface2);
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.95rem;
+    font-family: 'Noto Sans TC', sans-serif;
+    color: var(--text);
+    width: 100%;
+  }
+  .option-btn:hover:not(:disabled) { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
+  .option-btn:disabled { cursor: default; }
+  .option-btn.selected-correct { border-color: var(--success); background: var(--success-light); color: #065f46; }
+  .option-btn.selected-wrong { border-color: var(--error); background: var(--error-light); color: #991b1b; }
+  .option-btn.reveal-correct { border-color: var(--success); background: var(--success-light); color: #065f46; }
+
+  .option-label {
+    min-width: 28px; height: 28px;
+    background: var(--border);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.78rem;
+    flex-shrink: 0;
+    transition: all 0.2s;
+  }
+  .option-btn.selected-correct .option-label { background: var(--success); color: white; }
+  .option-btn.selected-wrong .option-label { background: var(--error); color: white; }
+  .option-btn.reveal-correct .option-label { background: var(--success); color: white; }
+
+  /* ── Feedback panel ── */
+  .feedback-panel {
+    display: none;
+    margin-top: 16px;
+    border-radius: var(--radius-sm);
+    padding: 16px 18px;
+    animation: fadeUp 0.3s ease;
+  }
+  .feedback-panel.show { display: block; }
+  .feedback-panel.correct { background: var(--success-light); border: 1.5px solid var(--success); }
+  .feedback-panel.wrong { background: var(--error-light); border: 1.5px solid var(--error); }
+
+  .feedback-title {
+    font-size: 1.1rem;
+    font-weight: 800;
+    margin-bottom: 6px;
+  }
+  .feedback-panel.correct .feedback-title { color: #065f46; }
+  .feedback-panel.wrong .feedback-title { color: #991b1b; }
+
+  .feedback-analysis {
+    font-size: 0.88rem;
+    line-height: 1.6;
+    color: var(--text);
+    margin-bottom: 12px;
+  }
+  .feedback-hint {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-style: italic;
+    padding-top: 8px;
+    border-top: 1px solid rgba(0,0,0,0.08);
+  }
+
+  .quiz-actions { display: flex; gap: 10px; margin-top: 16px; }
+  .btn-next {
+    flex: 2;
+    padding: 14px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Noto Sans TC', sans-serif;
+    transition: all 0.2s;
+  }
+  .btn-next:hover { background: var(--primary-dark); }
+  .btn-skip {
+    flex: 1;
+    padding: 14px;
+    background: none;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-family: 'Noto Sans TC', sans-serif;
+    transition: all 0.2s;
+  }
+  .btn-skip:hover { border-color: var(--warn); color: var(--warn); }
+  .btn-skip:disabled { opacity: 0.4; cursor: default; }
+
+  /* ── Results Screen ── */
+  .result-hero { text-align: center; padding: 10px 0 20px; }
+  .result-emoji { font-size: 3.5rem; line-height: 1; margin-bottom: 14px; }
+  .result-score-ring {
+    width: 110px; height: 110px;
+    border-radius: 50%;
+    background: conic-gradient(var(--primary) 0%, var(--border) 0%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+    position: relative;
+  }
+  .result-score-inner {
+    width: 86px; height: 86px;
+    border-radius: 50%;
+    background: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .result-score-num {
+    font-family: 'Sora', sans-serif;
+    font-weight: 800;
+    font-size: 1.7rem;
+    color: var(--primary);
+    line-height: 1;
+  }
+  .result-score-label { font-size: 0.68rem; color: var(--text-muted); font-weight: 600; }
+  .result-title {
+    font-family: 'Sora', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 800;
+    margin-bottom: 6px;
+  }
+  .result-sub { color: var(--text-muted); font-size: 0.88rem; }
+
+  .result-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin: 18px 0;
+  }
+  .stat-box {
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    padding: 14px 10px;
+    text-align: center;
+    border: 1.5px solid var(--border);
+  }
+  .stat-num {
+    font-family: 'Sora', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 800;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .stat-num.green { color: var(--success); }
+  .stat-num.red { color: var(--error); }
+  .stat-num.blue { color: var(--primary); }
+  .stat-label { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; }
+
+  .result-actions { display: flex; flex-direction: column; gap: 10px; }
+  .btn-secondary {
+    width: 100%;
+    padding: 14px;
+    background: none;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    font-family: 'Noto Sans TC', sans-serif;
+    transition: all 0.2s;
+  }
+  .btn-secondary:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+
+  /* ── Wrong Book Screen ── */
+  .wrongbook-header { margin-bottom: 18px; }
+  .wrongbook-header h2 {
+    font-family: 'Sora', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .wrongbook-list { display: flex; flex-direction: column; gap: 10px; }
+  .wrongbook-item {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .wrongbook-badge {
+    min-width: 36px; height: 36px;
+    background: var(--error-light);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .wrongbook-badge-num { font-weight: 800; font-size: 0.9rem; color: var(--error); line-height: 1; }
+  .wrongbook-badge-label { font-size: 0.58rem; color: var(--error); font-weight: 600; }
+  .wrongbook-q { font-size: 0.88rem; line-height: 1.5; flex: 1; }
+  .wrongbook-meta { font-size: 0.75rem; color: var(--text-muted); margin-top: 3px; }
+  .wrongbook-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-muted);
+  }
+  .wrongbook-empty-icon { font-size: 2.5rem; margin-bottom: 10px; }
+
+  /* ── Misc ── */
+  .back-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 16px;
+    font-family: 'Noto Sans TC', sans-serif;
+    padding: 0;
+  }
+  .back-btn:hover { color: var(--primary); }
+
+  .no-questions {
+    text-align: center;
+    padding: 30px;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+
+  /* Timer */
+  .quiz-timer {
+    font-family: 'Sora', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    background: var(--surface2);
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1.5px solid var(--border);
+  }
+  .quiz-timer.warn { color: var(--error); border-color: var(--error-light); background: var(--error-light); }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="app-header">
+  <div class="app-logo">
+    <span class="app-logo-icon">⚡</span>
+    國中刷題
+  </div>
+  <div class="header-actions">
+    <button class="btn-ghost" onclick="showScreen('wrongbook')">
+      錯題本 <span class="badge" id="wrongBadge" style="display:none">0</span>
+    </button>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- ══ SETUP SCREEN ══ -->
+  <div class="screen active" id="screen-setup">
+    <div class="card">
+      <div class="setup-hero">
+        <div class="setup-hero-emoji">📚</div>
+        <h1>線上刷題</h1>
+        <p>選擇範圍，開始練習！</p>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">科目</label>
+        <select class="form-select" id="sel-subject">
+          <option value="">全部科目</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">年級</label>
+        <select class="form-select" id="sel-grade">
+          <option value="">全部年級</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">段考</label>
+        <select class="form-select" id="sel-exam">
+          <option value="">全部段考</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">練習模式</label>
+        <div class="mode-toggle">
+          <button class="mode-btn active" onclick="setMode('all', this)">📖 全部題目</button>
+          <button class="mode-btn" onclick="setMode('wrong', this)">🔴 錯題複習</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">題目數量</label>
+        <div class="slider-row">
+          <input type="range" id="q-count" min="1" max="20" value="10" oninput="updateSlider(this)">
+          <div class="slider-val" id="q-count-val">10</div>
+        </div>
+        <div class="q-count-hint" id="q-count-hint">共可出 <strong>59</strong> 題，已選 <strong>10</strong> 題</div>
+      </div>
+
+      <button class="btn-primary" onclick="startQuiz()" id="start-btn">開始測驗 →</button>
+    </div>
+
+    <!-- Upload new question bank -->
+    <div class="card">
+      <div class="form-label" style="margin-bottom:12px">📂 更新題庫（上傳 xlsx）</div>
+      <div class="upload-area" id="uploadArea">
+        <input type="file" accept=".xlsx,.xls" onchange="handleUpload(this)">
+        <div class="upload-area-icon">📊</div>
+        <div class="upload-area-text">
+          點擊或拖曳上傳 <strong>xlsx 題庫</strong><br>
+          <span style="font-size:0.75rem">欄位需包含：科目、年級、段考、題目、選項A-D、答案</span>
+        </div>
+      </div>
+      <div class="upload-status" id="uploadStatus"></div>
+    </div>
+  </div>
+
+  <!-- ══ QUIZ SCREEN ══ -->
+  <div class="screen" id="screen-quiz">
+    <button class="back-btn" onclick="showScreen('setup')">← 返回設定</button>
+
+    <div class="card">
+      <div class="quiz-meta">
+        <span class="quiz-tag" id="quiz-tag">英文・會考</span>
+        <span class="quiz-timer" id="quiz-timer">00:00</span>
+      </div>
+
+      <div class="quiz-counter" id="quiz-counter">第 1 / 10 題</div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill" style="width:10%"></div>
+      </div>
+
+      <div class="quiz-question" id="quiz-question">題目載入中...</div>
+
+      <div class="options-list" id="options-list"></div>
+
+      <div class="feedback-panel" id="feedback-panel">
+        <div class="feedback-title" id="feedback-title">答對了！🎉</div>
+        <div class="feedback-analysis" id="feedback-analysis"></div>
+        <div class="feedback-hint" id="feedback-hint"></div>
+      </div>
+
+      <div class="quiz-actions">
+        <button class="btn-skip" id="btn-skip" onclick="skipQuestion()">跳過此題</button>
+        <button class="btn-next" id="btn-next" onclick="nextQuestion()" style="display:none">下一題 →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ RESULT SCREEN ══ -->
+  <div class="screen" id="screen-result">
+    <div class="card">
+      <div class="result-hero">
+        <div class="result-emoji" id="result-emoji">🎯</div>
+        <div class="result-score-ring" id="score-ring">
+          <div class="result-score-inner">
+            <span class="result-score-num" id="result-pct">0%</span>
+            <span class="result-score-label">正確率</span>
+          </div>
+        </div>
+        <div class="result-title" id="result-title">測驗完成！</div>
+        <div class="result-sub" id="result-sub"></div>
+      </div>
+
+      <div class="result-stats">
+        <div class="stat-box">
+          <span class="stat-num green" id="stat-correct">0</span>
+          <span class="stat-label">答對</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-num red" id="stat-wrong">0</span>
+          <span class="stat-label">答錯</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-num blue" id="stat-skip">0</span>
+          <span class="stat-label">跳過</span>
+        </div>
+      </div>
+
+      <div class="result-actions">
+        <button class="btn-primary" onclick="showScreen('setup')">🔄 再來一次</button>
+        <button class="btn-secondary" onclick="reviewWrong()">📖 查看錯題</button>
+        <button class="btn-secondary" onclick="exportWrongXLSX()">⬇️ 匯出錯題 xlsx</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ WRONGBOOK SCREEN ══ -->
+  <div class="screen" id="screen-wrongbook">
+    <button class="back-btn" onclick="showScreen('setup')">← 返回設定</button>
+
+    <div class="card">
+      <div class="wrongbook-header">
+        <h2>🔴 錯題本</h2>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button class="btn-secondary" onclick="exportWrongXLSX()" style="flex:1;padding:10px">⬇️ 匯出 xlsx</button>
+          <button class="btn-secondary" onclick="clearWrongBook()" style="flex:1;padding:10px;border-color:var(--error);color:var(--error)">🗑 清除錯題本</button>
+        </div>
+      </div>
+      <div class="wrongbook-list" id="wrongbook-list"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+//  DATA
+// ══════════════════════════════════════════════
+const BUILTIN_QUESTIONS = [{"編號":1,"科目":"英文","年級":"114年","段考":"會考","題目":"Look at the picture. A ___ is flying over the houses.","選項A":"bird","選項B":"butterfly","選項C":"kite","選項D":"plane","答案":"D","解析":"","提示":"","錯誤標記":""},{"編號":2,"科目":"英文","年級":"114年","段考":"會考","題目":"When I was a teenager, I was very ___. But now, it's easier for me to talk to people.","選項A":"happy","選項B":"lazy","選項C":"popular","選項D":"shy","答案":"D","解析":"與『現在容易跟人講話』對比，過去應為害羞。","提示":"反義對比","錯誤標記":""},{"編號":3,"科目":"英文","年級":"114年","段考":"會考","題目":"Lena doesn't want to go ___ with John because she is afraid of water.","選項A":"dancing","選項B":"hiking","選項C":"sailing","選項D":"shopping","答案":"C","解析":"因怕水，故不選航行（sailing）。","提示":"怕水→水上活動","錯誤標記":""},{"編號":4,"科目":"英文","年級":"114年","段考":"會考","題目":"Cindy enjoys ___ her dad read stories to her before bed.","選項A":"to listen to","選項B":"listening to","選項C":"listen to","選項D":"listens to","答案":"B","解析":"enjoy 後須接動名詞 V-ing。","提示":"enjoy + V-ing","錯誤標記":""},{"編號":5,"科目":"英文","年級":"114年","段考":"會考","題目":"Dad is busy cooking in the kitchen. Dinner will be ___ in ten minutes.","選項A":"free","選項B":"full","選項C":"medium","選項D":"ready","答案":"D","解析":"晚餐十分鐘後即可準備好（ready）。","提示":"準備好","錯誤標記":""},{"編號":6,"科目":"英文","年級":"114年","段考":"會考","題目":"There are so many new ___ in the office. It'll take me some time to remember who is who.","選項A":"faces","選項B":"ideas","選項C":"rules","選項D":"tools","答案":"A","解析":"『新面孔』指辦公室的新同事。","提示":"新面孔=新人","錯誤標記":""},{"編號":7,"科目":"英文","年級":"114年","段考":"會考","題目":"I feel like a ___. I was looking for my keys for hours but they have been in my pocket the whole time.","選項A":"fool","選項B":"ghost","選項C":"king","選項D":"stranger","答案":"A","解析":"鑰匙在口袋仍找很久，覺得像傻瓜。","提示":"覺得像傻瓜","錯誤標記":""},{"編號":8,"科目":"英文","年級":"114年","段考":"會考","題目":"Mr. and Mrs. Wu have three daughters. Two are in high school, and ___ is in elementary school.","選項A":"each","選項B":"the other","選項C":"the one","選項D":"the next","答案":"B","解析":"三人中兩個已提，剩餘一個用 the other。","提示":"三選二剩一","錯誤標記":""},{"編號":9,"科目":"英文","年級":"114年","段考":"會考","題目":"It is hard for trees to ___ along this beach because of the strong winds from the sea.","選項A":"blow","選項B":"build","選項C":"follow","選項D":"grow","答案":"D","解析":"海邊強風使樹不易生長（grow）。","提示":"樹木生長","錯誤標記":""},{"編號":10,"科目":"英文","年級":"114年","段考":"會考","題目":"Christmas ___ and I want to visit my aunt abroad. Do you have any plans yet?","選項A":"came","選項B":"comes","選項C":"is coming","選項D":"was coming","答案":"C","解析":"聖誕節即將到來，用現在進行式表未來。","提示":"即將到來","錯誤標記":""},{"編號":11,"科目":"英文","年級":"114年","段考":"會考","題目":"Jo won't be happy if you're late for his party tonight, so ___ sure that you arrive on time.","選項A":"make","選項B":"makes","選項C":"to make","選項D":"is making","答案":"A","解析":"","提示":"","錯誤標記":""},{"編號":12,"科目":"英文","年級":"114年","段考":"會考","題目":"You may have a long drive because of the terrible ___. There are usually a lot of cars and buses during this time.","選項A":"experience","選項B":"machine","選項C":"service","選項D":"traffic","答案":"D","解析":"","提示":"","錯誤標記":""},{"編號":13,"科目":"英文","年級":"114年","段考":"會考","題目":"In the future, there will be ___ greater basketball players than Stephen Curry, but now we believe he is the best!","選項A":"again","選項B":"already","選項C":"never","選項D":"perhaps","答案":"D","解析":"","提示":"","錯誤標記":""},{"編號":14,"科目":"英文","年級":"114年","段考":"會考","題目":"I guess the rainwater has come in from the kitchen. See? ___ of the windows are closed except the one in the kitchen.","選項A":"All","選項B":"Both","選項C":"Most","選項D":"Some","答案":"A","解析":"","提示":"","錯誤標記":""},{"編號":15,"科目":"英文","年級":"114年","段考":"會考","題目":"___ machines have been used to pick fruits for a long time, they were not used on strawberry farms until several years ago.","選項A":"Although","選項B":"Because","選項C":"Before","選項D":"If","答案":"A","解析":"","提示":"","錯誤標記":""},{"編號":16,"科目":"英文","年級":"114年","段考":"會考","題目":"There are online videos that teach you exercises you can do at home. They'll ___ you a trip to the gym, and some money too.","選項A":"cost","選項B":"give","選項C":"keep","選項D":"save","答案":"D","解析":"","提示":"","錯誤標記":""},{"編號":17,"科目":"英文","年級":"114年","段考":"會考","題目":"Jane's parents are always happy to see their grandchildren, but mine ___ less so when I visit them with my kids.","選項A":"is","選項B":"are","選項C":"do","選項D":"does","答案":"B","解析":"","提示":"","錯誤標記":""},{"編號":18,"科目":"英文","年級":"114年","段考":"會考","題目":"Before she ___ about it, you should tell Daphne you broke her favorite cup.","選項A":"asks","選項B":"asked","選項C":"was asking","選項D":"will ask","答案":"A","解析":"","提示":"","錯誤標記":""},{"編號":19,"科目":"英文","年級":"114年","段考":"會考","題目":"It was very windy this morning. Some of the shirts on the balcony were blown away ___ in the pond.","選項A":"fell","選項B":"and fell","選項C":"fallen","選項D":"and fallen","答案":"B","解析":"","提示":"","錯誤標記":""},{"編號":20,"科目":"英文","年級":"113年","段考":"會考","題目":"Look at the picture. There is ___ under the door.","選項A":"an envelope","選項B":"a plant","選項C":"a sign","選項D":"an umbrella","答案":"A","解析":"","提示":"","錯誤標記":""},{"編號":21,"科目":"英文","年級":"113年","段考":"會考","題目":"My ___ hurts so much that I cannot even turn my head.","選項A":"arm","選項B":"knee","選項C":"neck","選項D":"stomach","答案":"C","解析":"","提示":"","錯誤標記":""},{"編號":22,"科目":"英文","年級":"113年","段考":"會考","題目":"Our school basketball team won the national game last night. We are so ___ them.","選項A":"popular with","選項B":"proud of","選項C":"sorry for","選項D":"worried about","答案":"B","解析":"","提示":"","錯誤標記":""},{"編號":23,"科目":"英文","年級":"113年","段考":"會考","題目":"Tomorrow is Sam's last day in the office. Nobody knows why he decided to ___.","選項A":"hide","選項B":"leave","選項C":"pack","選項D":"walk","答案":"B","解析":"","提示":"","錯誤標記":""},{"編號":24,"科目":"英文","年級":"113年","段考":"會考","題目":"It's not a good idea to go mountain climbing in this bad ___. We should wait until the typhoon goes away.","選項A":"chance","選項B":"dream","選項C":"habit","選項D":"weather","答案":"D","解析":"","提示":"","錯誤標記":""},{"編號":25,"科目":"英文","年級":"113年","段考":"會考","題目":"Chris loves walking with Anna on snowy days, but Anna hates ___ very much.","選項A":"them","選項B":"so","選項C":"one","選項D":"it","答案":"D","解析":"","提示":"","錯誤標記":""},{"編號":26,"科目":"英文","年級":"113年","段考":"會考","題目":"Lora likes to eat bananas that are already a little brown on the outside, and so ___ I.","選項A":"am","選項B":"do","選項C":"have","選項D":"will","答案":"B","解析":"","提示":"","錯誤標記":""},{"編號":27,"科目":"英文","年級":"113年","段考":"會考","題目":"Your refrigerator shouldn't be making loud noises now, but if it ___ does, just give me a call and I'll come check it again.","選項A":"already","選項B":"even","選項C":"finally","選項D":"still","答案":"D","解析":"","提示":"","錯誤標記":""},{"編號":28,"科目":"英文","年級":"113年","段考":"會考","題目":"After winning money in the card game, Jay decided to try again. He felt that he might also be ___ a second time.","選項A":"famous","選項B":"interested","選項C":"lucky","選項D":"ready","答案":"C","解析":"","提示":"","錯誤標記":""},{"編號":29,"科目":"英文","年級":"113年","段考":"會考","題目":"The knife doesn't cut very well. It's not as ___ as before.","選項A":"bright","選項B":"heavy","選項C":"quick","選項D":"sharp","答案":"D","解析":"","提示":"","錯誤標記":""},{"編號":30,"科目":"英文","年級":"113年","段考":"會考","題目":"John will stay with his sister until he ___ an apartment.","選項A":"will find","選項B":"would find","選項C":"finds","選項D":"found","答案":"C","解析":"","提示":"","錯誤標記":""},{"編號":31,"科目":"英文","年級":"113年","段考":"會考","題目":"Students ___ to go on the school trip should ask their parents first.","選項A":"who want","選項B":"want","選項C":"who they want","選項D":"what they want","答案":"A","解析":"","提示":"","錯誤標記":""},{"編號":32,"科目":"英文","年級":"113年","段考":"會考","題目":"The temple sits alone in the mountains at a height of 3,000m ___ sea level.","選項A":"above","選項B":"at","選項C":"below","選項D":"in","答案":"A","解析":"","提示":"","錯誤標記":""},{"編號":33,"科目":"英文","年級":"113年","段考":"會考","題目":"Patty spent several days planning to invite Charlie to dinner, ___ she couldn't say a word when they met.","選項A":"but","選項B":"if","選項C":"or","選項D":"so","答案":"A","解析":"","提示":"","錯誤標記":""},{"編號":34,"科目":"英文","年級":"113年","段考":"會考","題目":"I can't tell you what I think of the movie because I ___ it. I'll probably watch it this Saturday.","選項A":"am not seeing","選項B":"don't see","選項C":"haven't seen","選項D":"won't see","答案":"C","解析":"","提示":"","錯誤標記":""},{"編號":35,"科目":"英文","年級":"113年","段考":"會考","題目":"The new guy at the help desk answers calls like a ___. There are no ups and downs in his voice and you can't tell if he is happy or sad.","選項A":"father","選項B":"foreigner","選項C":"radio","選項D":"robot","答案":"D","解析":"","提示":"","錯誤標記":""},{"編號":36,"科目":"英文","年級":"113年","段考":"會考","題目":"Jasmine planned to spend her summer in the country, but right after she got there, she started to ___ the noise in the city.","選項A":"enjoy","選項B":"mind","選項C":"miss","選項D":"notice","答案":"C","解析":"","提示":"","錯誤標記":""},{"編號":37,"科目":"英文","年級":"113年","段考":"會考","題目":"\"Bad traffic\" is perhaps the ___ excuse for being late when your boss knows it only takes you five minutes to walk to work.","選項A":"easiest","選項B":"oldest","選項C":"smartest","選項D":"worst","答案":"D","解析":"","提示":"","錯誤標記":""},{"編號":38,"科目":"英文","年級":"113年","段考":"會考","題目":"The housework in Mr. and Mrs. Wang's family ___ between them and their kids. Everyone's got their own job to do.","選項A":"is shared","選項B":"are shared","選項C":"shares","選項D":"share","答案":"A","解析":"","提示":"","錯誤標記":""},{"編號":39,"科目":"英文","年級":"113年","段考":"會考","題目":"I want to find another dentist because ___ pulled out a good tooth last time I went to him.","選項A":"I","選項B":"me","選項C":"mine","選項D":"myself","答案":"C","解析":"","提示":"","錯誤標記":""},{"編號":40,"科目":"英文","年級":"113年","段考":"會考","題目":"Mom: Linda, you've been playing computer games all evening! Have you finished your report? Linda: Well, ___ most of it this afternoon, and I'll finish it by Friday.","選項A":"I would do","選項B":"I did","選項C":"I was doing","選項D":"I'll do","答案":"B","解析":"","提示":"","錯誤標記":""},{"編號":41,"科目":"英文","年級":"七年級","段考":"第二次段考","題目":"Which is your bag, the red ___ or the blue ___?","選項A":"ones; ones","選項B":"one; one","選項C":"one; ones","選項D":"ones; one","答案":"B","解析":"","提示":"","錯誤標記":""},{"編號":42,"科目":"英文","年級":"七年級","段考":"第二次段考","題目":"A: ___ are two sandwiches?  B: They are sixty dollars.","選項A":"How much","選項B":"How old","選項C":"How many","選項D":"How tall","答案":"A","解析":"","提示":"","錯誤標記":""},{"編號":43,"科目":"英文","年級":"七年級","段考":"第二次段考","題目":"There are five dolls in the box: four big ___ and a small ___.","選項A":"one; one","選項B":"one; ones","選項C":"ones; one","選項D":"ones; ones","答案":"C","解析":"","提示":"","錯誤標記":""},{"編號":44,"科目":"英文","年級":"七年級","段考":"第二次段考","題目":"A: Which ice cream is your favorite, milk, chocolate, ___ banana?  B: Chocolate ice cream is my favorite.","選項A":"then","選項B":"and","選項C":"but","選項D":"or","答案":"D","解析":"","提示":"","錯誤標記":""},{"編號":45,"科目":"英文","年級":"七年級","段考":"第二次段考","題目":"A: How much ___ the black tea?  B: Thirty-five dollars.","選項A":"does","選項B":"do","選項C":"is","選項D":"are","答案":"C","解析":"","提示":"","錯誤標記":""},{"編號":46,"科目":"英文","年級":"七年級","段考":"第二次段考","題目":"A: Can I have ___ hot tea?  B: Sorry. We don't have ___ hot tea.","選項A":"some; many","選項B":"many; any","選項C":"some; any","選項D":"any; many","答案":"C","解析":"","提示":"","錯誤標記":""},{"編號":47,"科目":"英文","年級":"七年級","段考":"第二次段考","題目":"A: Which boy ___ long hair, Jimmy or Tony?  B: Tony.","選項A":"has","選項B":"is","選項C":"is having","選項D":"does he have","答案":"A","解析":"","提示":"","錯誤標記":""},{"編號":48,"科目":"英文","年級":"七年級","段考":"第二次段考","題目":"A: Which ___ they like, baseball or basketball?  B: They like baseball.","選項A":"are","選項B":"can","選項C":"does","選項D":"do","答案":"D","解析":"","提示":"","錯誤標記":""},{"編號":49,"科目":"英文","年級":"七年級","段考":"第二次段考","題目":"A: ___  B: Yes, I want some coffee, please.","選項A":"May I help you?","選項B":"For here or to go?","選項C":"How much is the coffee?","選項D":"Which do you like, coffee or tea?","答案":"A","解析":"","提示":"","錯誤標記":""},{"編號":50,"科目":"英文","年級":"七年級","段考":"第二次段考","題目":"A: May I have some juice, please?  B: ___","選項A":"Yes, please.","選項B":"It is my treat.","選項C":"Thank you very much.","選項D":"Of course. Here you go.","答案":"D","解析":"","提示":"","錯誤標記":""},{"編號":51,"科目":"英文","年級":"七年級","段考":"第二次段考","題目":"A: I want a hamburger and some soup.  B: ___  A: For here, please.","選項A":"And you, sir?","選項B":"Here you are, sir.","選項C":"For here or to go?","選項D":"What do you want for lunch?","答案":"C","解析":"","提示":"","錯誤標記":""},{"編號":52,"科目":"英文","年級":"七年級","段考":"第二次段考","題目":"A: Let's go have some milk tea. My treat.  B: ___","選項A":"That's a great one!","選項B":"That's sweet of you.","選項C":"I like the chocolate one.","選項D":"Which do you like, green tea or black tea?","答案":"B","解析":"","提示":"","錯誤標記":""},{"編號":53,"科目":"英文","年級":"七年級","段考":"第二次段考","題目":"Nancy and her husband are taking a walk on the ___ near the park.","選項A":"street","選項B":"sky","選項C":"part","選項D":"shop","答案":"A","解析":"","提示":"","錯誤標記":""},{"編號":54,"科目":"英文","年級":"七年級","段考":"第二次段考","題目":"I don't like the black umbrella. The color is too ___.","選項A":"hot","選項B":"sweet","選項C":"bright","選項D":"dark","答案":"D","解析":"","提示":"","錯誤標記":""},{"編號":55,"科目":"英文","年級":"七年級","段考":"第二次段考","題目":"A: Let's go to the museum. There are new paintings this week.  B: Sure. I like ___ very much.","選項A":"coffee","選項B":"baseball","選項C":"art","選項D":"music","答案":"C","解析":"","提示":"","錯誤標記":""},{"編號":56,"科目":"英文","年級":"七年級","段考":"第二次段考","題目":"The man is ___ the new house to us.","選項A":"making","選項B":"treating","選項C":"painting","選項D":"showing","答案":"D","解析":"","提示":"","錯誤標記":""},{"編號":57,"科目":"英文","年級":"七年級","段考":"第二次段考","題目":"A: I am hungry.  B: Let's go eat at Yummy Yummy. They have great ___.","選項A":"tea","選項B":"coffee","選項C":"drinks","選項D":"hamburgers","答案":"D","解析":"","提示":"","錯誤標記":""},{"編號":58,"科目":"英文","年級":"七年級","段考":"第二次段考","題目":"A: Tom, clean the living room.  B: Can I do it ___? I'm doing my homework.","選項A":"then","選項B":"later","選項C":"before","選項D":"now","答案":"B","解析":"","提示":"","錯誤標記":""},{"編號":59,"科目":"英文","年級":"七年級","段考":"第二次段考","題目":"A: What are you drinking?  B: ___ It's great. Do you want some?","選項A":"Juice.","選項B":"Cookies.","選項C":"A cake.","選項D":"A sandwich.","答案":"A","解析":"","提示":"","錯誤標記":""}];
+
+// ══════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════
+let allQuestions = [...BUILTIN_QUESTIONS];
+let sessionQuestions = [];
+let currentIdx = 0;
+let answered = false;
+let stats = { correct: 0, wrong: 0, skip: 0 };
+let mode = 'all'; // 'all' | 'wrong'
+let timerInterval = null;
+let elapsedSecs = 0;
+
+// Wrong book: { [qid]: { count, lastDate, question } }
+function loadWrongBook() {
+  try { return JSON.parse(localStorage.getItem('wrongBook') || '{}'); } catch { return {}; }
+}
+function saveWrongBook(wb) {
+  localStorage.setItem('wrongBook', JSON.stringify(wb));
+}
+
+// ══════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════
+function init() {
+  populateFilters();
+  updateWrongBadge();
+  updateAvailableCount();
+}
+
+function populateFilters() {
+  const subjects = [...new Set(allQuestions.map(q => q['科目']))].filter(Boolean);
+  const grades   = [...new Set(allQuestions.map(q => q['年級']))].filter(Boolean);
+  const exams    = [...new Set(allQuestions.map(q => q['段考']))].filter(Boolean);
+
+  fillSelect('sel-subject', subjects);
+  fillSelect('sel-grade', grades);
+  fillSelect('sel-exam', exams);
+
+  ['sel-subject','sel-grade','sel-exam'].forEach(id => {
+    document.getElementById(id).onchange = updateAvailableCount;
+  });
+}
+
+function fillSelect(id, values) {
+  const sel = document.getElementById(id);
+  const cur = sel.value;
+  sel.innerHTML = `<option value="">全部</option>` + values.map(v => `<option value="${v}">${v}</option>`).join('');
+  if (values.includes(cur)) sel.value = cur;
+}
+
+function getFiltered() {
+  const subj = document.getElementById('sel-subject').value;
+  const grade = document.getElementById('sel-grade').value;
+  const exam  = document.getElementById('sel-exam').value;
+  let pool = allQuestions;
+  if (subj) pool = pool.filter(q => q['科目'] === subj);
+  if (grade) pool = pool.filter(q => q['年級'] === grade);
+  if (exam)  pool = pool.filter(q => q['段考'] === exam);
+  if (mode === 'wrong') {
+    const wb = loadWrongBook();
+    pool = pool.filter(q => wb[q['編號']]);
+  }
+  return pool;
+}
+
+function updateAvailableCount() {
+  const pool = getFiltered();
+  const n = parseInt(document.getElementById('q-count').value);
+  document.getElementById('q-count-hint').innerHTML =
+    `共可出 <strong>${pool.length}</strong> 題，已選 <strong>${Math.min(n, pool.length)}</strong> 題`;
+  document.getElementById('start-btn').disabled = pool.length === 0;
+}
+
+function updateSlider(el) {
+  document.getElementById('q-count-val').textContent = el.value;
+  updateAvailableCount();
+}
+
+function setMode(m, btn) {
+  mode = m;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  updateAvailableCount();
+}
+
+// ══════════════════════════════════════════════
+//  QUIZ LOGIC
+// ══════════════════════════════════════════════
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function startQuiz() {
+  const pool = getFiltered();
+  const n = Math.min(parseInt(document.getElementById('q-count').value), pool.length);
+  if (n === 0) { alert('沒有符合條件的題目！'); return; }
+
+  sessionQuestions = shuffle(pool).slice(0, n);
+  currentIdx = 0;
+  stats = { correct: 0, wrong: 0, skip: 0 };
+  startTimer();
+  showScreen('quiz');
+  renderQuestion();
+}
+
+function startTimer() {
+  if (timerInterval) clearInterval(timerInterval);
+  elapsedSecs = 0;
+  timerInterval = setInterval(() => {
+    elapsedSecs++;
+    const m = String(Math.floor(elapsedSecs / 60)).padStart(2, '0');
+    const s = String(elapsedSecs % 60).padStart(2, '0');
+    const el = document.getElementById('quiz-timer');
+    el.textContent = `${m}:${s}`;
+    el.className = 'quiz-timer' + (elapsedSecs > 120 ? ' warn' : '');
+  }, 1000);
+}
+
+function renderQuestion() {
+  answered = false;
+  const q = sessionQuestions[currentIdx];
+  const total = sessionQuestions.length;
+  const num = currentIdx + 1;
+
+  document.getElementById('quiz-tag').textContent = `${q['科目']} · ${q['段考']}`;
+  document.getElementById('quiz-counter').textContent = `第 ${num} / ${total} 題`;
+  document.getElementById('progress-fill').style.width = `${(num / total) * 100}%`;
+  document.getElementById('quiz-question').textContent = q['題目'];
+
+  // Options
+  const opts = ['A','B','C','D'];
+  const list = document.getElementById('options-list');
+  list.innerHTML = opts.map(letter => `
+    <button class="option-btn" onclick="selectAnswer('${letter}', this)">
+      <span class="option-label">${letter}</span>
+      <span>${q['選項'+letter]}</span>
+    </button>
+  `).join('');
+
+  // Feedback
+  const fb = document.getElementById('feedback-panel');
+  fb.className = 'feedback-panel';
+
+  document.getElementById('btn-skip').style.display = '';
+  document.getElementById('btn-skip').disabled = false;
+  document.getElementById('btn-next').style.display = 'none';
+}
+
+function selectAnswer(letter, btn) {
+  if (answered) return;
+  answered = true;
+
+  const q = sessionQuestions[currentIdx];
+  const correct = q['答案'];
+  const isCorrect = letter === correct;
+
+  // Disable all
+  document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
+
+  // Mark selected
+  if (isCorrect) {
+    btn.classList.add('selected-correct');
+    btn.querySelector('.option-label').textContent = '✓';
+    stats.correct++;
+  } else {
+    btn.classList.add('selected-wrong');
+    btn.querySelector('.option-label').textContent = '✗';
+    stats.wrong++;
+    // Record wrong
+    recordWrong(q);
+    // Reveal correct
+    document.querySelectorAll('.option-btn').forEach(b => {
+      const lbl = b.querySelector('.option-label').textContent;
+      // match correct letter
+      if (b.querySelector('.option-label').textContent === correct ||
+          b.children[1].textContent === q['選項'+correct]) {
+        // find by option text
+      }
+    });
+    // simpler: find by letter index
+    const opts = ['A','B','C','D'];
+    const correctIdx = opts.indexOf(correct);
+    const allBtns = document.querySelectorAll('.option-btn');
+    allBtns[correctIdx].classList.add('reveal-correct');
+    allBtns[correctIdx].querySelector('.option-label').textContent = '✓';
+  }
+
+  // Feedback
+  const fb = document.getElementById('feedback-panel');
+  fb.className = 'feedback-panel show ' + (isCorrect ? 'correct' : 'wrong');
+  document.getElementById('feedback-title').textContent = isCorrect ? '答對了！🎉' : '答錯了 😢';
+
+  const analysis = q['解析'] || (isCorrect ? '做得好！繼續保持。' : `正確答案是 (${correct}) ${q['選項'+correct]}`);
+  document.getElementById('feedback-analysis').textContent = analysis;
+
+  const hint = q['提示'];
+  const hintEl = document.getElementById('feedback-hint');
+  if (hint) {
+    hintEl.textContent = `💡 提示：${hint}`;
+    hintEl.style.display = '';
+  } else {
+    hintEl.style.display = 'none';
+  }
+
+  document.getElementById('btn-skip').style.display = 'none';
+  document.getElementById('btn-next').style.display = '';
+  updateWrongBadge();
+}
+
+function skipQuestion() {
+  if (answered) return;
+  stats.skip++;
+  nextQuestion();
+}
+
+function nextQuestion() {
+  currentIdx++;
+  if (currentIdx >= sessionQuestions.length) {
+    endQuiz();
+  } else {
+    renderQuestion();
+  }
+}
+
+function endQuiz() {
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  const total = sessionQuestions.length;
+  const pct = total > 0 ? Math.round((stats.correct / total) * 100) : 0;
+
+  document.getElementById('result-pct').textContent = pct + '%';
+  document.getElementById('stat-correct').textContent = stats.correct;
+  document.getElementById('stat-wrong').textContent = stats.wrong;
+  document.getElementById('stat-skip').textContent = stats.skip;
+
+  // Conic gradient for ring
+  document.getElementById('score-ring').style.background =
+    `conic-gradient(var(--primary) ${pct * 3.6}deg, var(--border) 0deg)`;
+
+  let emoji = '😅', title = '繼續努力！';
+  if (pct >= 90) { emoji = '🏆'; title = '太厲害了！'; }
+  else if (pct >= 70) { emoji = '🎯'; title = '表現不錯！'; }
+  else if (pct >= 50) { emoji = '📚'; title = '還需加強！'; }
+
+  document.getElementById('result-emoji').textContent = emoji;
+  document.getElementById('result-title').textContent = title;
+  document.getElementById('result-sub').textContent =
+    `答對 ${stats.correct} 題，答錯 ${stats.wrong} 題，跳過 ${stats.skip} 題`;
+
+  showScreen('result');
+}
+
+// ══════════════════════════════════════════════
+//  WRONG BOOK
+// ══════════════════════════════════════════════
+function recordWrong(q) {
+  const wb = loadWrongBook();
+  const id = q['編號'];
+  if (!wb[id]) {
+    wb[id] = { count: 0, lastDate: '', q };
+  }
+  wb[id].count++;
+  wb[id].lastDate = new Date().toLocaleDateString('zh-TW');
+  wb[id].q = q;
+  saveWrongBook(wb);
+}
+
+function updateWrongBadge() {
+  const wb = loadWrongBook();
+  const count = Object.keys(wb).length;
+  const badge = document.getElementById('wrongBadge');
+  if (count > 0) {
+    badge.style.display = '';
+    badge.textContent = count > 99 ? '99+' : count;
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function renderWrongBook() {
+  const wb = loadWrongBook();
+  const list = document.getElementById('wrongbook-list');
+  const items = Object.values(wb).sort((a, b) => b.count - a.count);
+
+  if (items.length === 0) {
+    list.innerHTML = `
+      <div class="wrongbook-empty">
+        <div class="wrongbook-empty-icon">🎉</div>
+        <div>錯題本是空的</div>
+        <div style="font-size:0.8rem;margin-top:6px">努力刷題，累積錯題吧！</div>
+      </div>`;
+    return;
+  }
+
+  list.innerHTML = items.map(({ count, lastDate, q }) => `
+    <div class="wrongbook-item">
+      <div class="wrongbook-badge">
+        <span class="wrongbook-badge-num">${count}</span>
+        <span class="wrongbook-badge-label">次</span>
+      </div>
+      <div>
+        <div class="wrongbook-q">${q['題目']}</div>
+        <div class="wrongbook-meta">
+          答案：${q['答案']} · ${q['科目']} ${q['年級']} ${q['段考']} · 最後錯誤：${lastDate}
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function reviewWrong() {
+  setMode('wrong', document.querySelectorAll('.mode-btn')[1]);
+  showScreen('setup');
+}
+
+function clearWrongBook() {
+  if (!confirm('確定要清除所有錯題紀錄嗎？')) return;
+  localStorage.removeItem('wrongBook');
+  updateWrongBadge();
+  renderWrongBook();
+}
+
+function exportWrongXLSX() {
+  const wb_data = loadWrongBook();
+  const items = Object.values(wb_data);
+  if (items.length === 0) { alert('錯題本是空的！'); return; }
+
+  const rows = items.map(({ count, lastDate, q }) => ({
+    '編號': q['編號'],
+    '科目': q['科目'],
+    '年級': q['年級'],
+    '段考': q['段考'],
+    '題目': q['題目'],
+    '選項A': q['選項A'],
+    '選項B': q['選項B'],
+    '選項C': q['選項C'],
+    '選項D': q['選項D'],
+    '答案': q['答案'],
+    '解析': q['解析'],
+    '錯誤次數': count,
+    '最後錯誤日期': lastDate
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '錯題本');
+
+  // Style header
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  ws['!cols'] = [8,8,8,10,40,12,12,12,12,8,20,10,14].map(w => ({ wch: w }));
+
+  XLSX.writeFile(wb, `錯題本_${new Date().toLocaleDateString('zh-TW').replace(/\//g,'-')}.xlsx`);
+}
+
+// ══════════════════════════════════════════════
+//  UPLOAD NEW QUESTION BANK
+// ══════════════════════════════════════════════
+function handleUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const status = document.getElementById('uploadStatus');
+  status.textContent = '讀取中...';
+  status.className = 'upload-status';
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'binary' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const data = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+      // Validate required columns
+      const required = ['科目','年級','段考','題目','選項A','選項B','選項C','選項D','答案'];
+      const cols = Object.keys(data[0] || {});
+      const missing = required.filter(r => !cols.includes(r));
+      if (missing.length) {
+        throw new Error(`缺少欄位：${missing.join('、')}`);
+      }
+
+      // Add 編號 if missing
+      data.forEach((row, i) => { if (!row['編號']) row['編號'] = i + 1; });
+
+      allQuestions = data;
+      populateFilters();
+      updateAvailableCount();
+
+      status.textContent = `✅ 成功載入 ${data.length} 題`;
+      status.className = 'upload-status ok';
+    } catch (err) {
+      status.textContent = `❌ 錯誤：${err.message}`;
+      status.className = 'upload-status err';
+    }
+  };
+  reader.readAsBinaryString(file);
+}
+
+// ══════════════════════════════════════════════
+//  SCREEN MANAGEMENT
+// ══════════════════════════════════════════════
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(`screen-${name}`).classList.add('active');
+  if (name === 'wrongbook') renderWrongBook();
+  if (name === 'setup') updateAvailableCount();
+  if (name !== 'quiz' && timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+}
+
+// ══════════════════════════════════════════════
+//  BOOT
+// ══════════════════════════════════════════════
+init();
+</script>
+</body>
+</html>
