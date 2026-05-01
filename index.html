@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>刷題競技場</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Kaisei+Decol:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap');
+:root{
+  --ink:#1a1a2e;--ink2:#16213e;--gold:#f5a623;--gold2:#e8951a;
+  --red:#e84545;--red-bg:#fff0f0;--green:#2eb872;--green-bg:#edfff5;
+  --blue:#3a86ff;--blue-bg:#eef4ff;--surface:#ffffff;--surface2:#f7f8fc;
+  --border:#e8eaf0;--muted:#8892a4;--radius:16px;--radius-sm:10px;
+  --shadow:0 4px 20px rgba(26,26,46,0.08);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Zen Kaku Gothic New',sans-serif;background:#f0f2f8;color:var(--ink);min-height:100vh;}
+.header{background:var(--ink);padding:0 20px;height:58px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;}
+.logo{font-family:'Kaisei Decol',serif;font-size:1.2rem;color:var(--gold);letter-spacing:1px;display:flex;align-items:center;gap:8px;}
+.hbtn{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.85);border-radius:8px;padding:6px 14px;font-size:0.8rem;font-weight:700;cursor:pointer;font-family:'Zen Kaku Gothic New',sans-serif;transition:all 0.2s;display:flex;align-items:center;gap:5px;}
+.hbtn:hover{background:rgba(245,166,35,0.2);border-color:var(--gold);color:var(--gold);}
+.hbtn .badge{background:var(--red);color:white;border-radius:10px;font-size:0.68rem;padding:1px 6px;font-weight:900;}
+.container{max-width:580px;margin:0 auto;padding:24px 16px 80px;}
+.screen{display:none;}
+.screen.active{display:block;animation:rise 0.3s ease;}
+@keyframes rise{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+.card{background:var(--surface);border-radius:var(--radius);padding:24px 20px;box-shadow:var(--shadow);margin-bottom:14px;border:1px solid var(--border);}
+.setup-banner{background:linear-gradient(135deg,var(--ink) 0%,#2d2b55 100%);border-radius:var(--radius);padding:28px 24px;margin-bottom:14px;position:relative;overflow:hidden;}
+.setup-banner::before{content:'⚔️';position:absolute;right:20px;top:50%;transform:translateY(-50%);font-size:4rem;opacity:0.15;}
+.setup-banner h1{font-family:'Kaisei Decol',serif;font-size:1.6rem;color:var(--gold);margin-bottom:6px;letter-spacing:1px;}
+.setup-banner p{color:rgba(255,255,255,0.6);font-size:0.85rem;}
+.db-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:8px;}
+.db-stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;text-align:center;}
+.db-stat-num{font-family:'Kaisei Decol',serif;font-size:1.5rem;font-weight:700;color:var(--ink);display:block;}
+.db-stat-num.gold{color:var(--gold2);} .db-stat-num.blue{color:var(--blue);} .db-stat-num.green{color:var(--green);}
+.db-stat-label{font-size:0.72rem;color:var(--muted);font-weight:700;margin-top:2px;display:block;}
+.reset-row{display:flex;gap:8px;margin-bottom:14px;}
+.reset-btn{flex:1;padding:9px 12px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--surface);font-size:0.8rem;font-weight:700;color:var(--muted);cursor:pointer;font-family:'Zen Kaku Gothic New',sans-serif;transition:all 0.2s;text-align:center;}
+.reset-btn:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-bg);}
+.reset-btn.danger:hover{border-color:var(--red);color:var(--red);background:var(--red-bg);}
+.section-title{font-size:0.75rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.form-group{margin-bottom:12px;}
+.form-label{display:block;font-size:0.75rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;}
+.form-select{width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:0.9rem;font-family:'Zen Kaku Gothic New',sans-serif;background:var(--surface2);color:var(--ink);appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238892a4' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;cursor:pointer;transition:border-color 0.2s;}
+.form-select:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(245,166,35,0.15);}
+.unit-grid{display:flex;flex-wrap:wrap;gap:7px;margin-top:4px;}
+.unit-chip{padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface2);font-size:0.82rem;font-weight:700;color:var(--muted);cursor:pointer;transition:all 0.15s;user-select:none;}
+.unit-chip:hover{border-color:var(--gold);color:var(--gold2);}
+.unit-chip.active{border-color:var(--gold);background:#fff8ee;color:var(--gold2);}
+.unit-chip.all-chip.active{background:var(--ink);border-color:var(--ink);color:white;}
+.mode-row{display:flex;gap:8px;margin-bottom:12px;}
+.mode-btn{flex:1;padding:10px 8px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--surface2);color:var(--muted);font-weight:700;font-size:0.82rem;cursor:pointer;text-align:center;transition:all 0.2s;font-family:'Zen Kaku Gothic New',sans-serif;}
+.mode-btn.active{border-color:var(--ink);background:var(--ink);color:var(--gold);}
+.slider-wrap{display:flex;align-items:center;gap:12px;}
+.slider-num{font-family:'Kaisei Decol',serif;font-size:1.6rem;font-weight:700;color:var(--ink);min-width:36px;text-align:center;}
+input[type=range]{flex:1;appearance:none;height:5px;border-radius:3px;background:var(--border);outline:none;cursor:pointer;}
+input[type=range]::-webkit-slider-thumb{appearance:none;width:20px;height:20px;border-radius:50%;background:var(--ink);box-shadow:0 2px 8px rgba(26,26,46,0.3);cursor:grab;}
+.slider-hint{font-size:0.78rem;color:var(--muted);margin-top:5px;}
+.priority-bar{display:flex;gap:8px;margin-top:12px;padding:10px 14px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);font-size:0.78rem;align-items:center;flex-wrap:wrap;}
+.priority-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.pitem{display:flex;align-items:center;gap:5px;color:var(--muted);font-weight:600;}
+.btn-start{width:100%;padding:16px;background:linear-gradient(135deg,var(--gold) 0%,var(--gold2) 100%);color:var(--ink);border:none;border-radius:var(--radius-sm);font-size:1.05rem;font-weight:900;font-family:'Zen Kaku Gothic New',sans-serif;cursor:pointer;transition:all 0.2s;letter-spacing:0.5px;box-shadow:0 4px 16px rgba(245,166,35,0.35);}
+.btn-start:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(245,166,35,0.4);}
+.btn-start:disabled{opacity:0.4;cursor:not-allowed;transform:none;box-shadow:none;}
+.upload-zone{border:2px dashed var(--border);border-radius:var(--radius-sm);padding:18px;text-align:center;cursor:pointer;position:relative;transition:all 0.2s;background:var(--surface2);}
+.upload-zone:hover{border-color:var(--gold);background:#fff8ee;}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.upload-icon{font-size:1.8rem;margin-bottom:6px;}
+.upload-text{font-size:0.83rem;color:var(--muted);font-weight:600;line-height:1.5;}
+.upload-text strong{color:var(--gold2);}
+.upload-msg{margin-top:8px;font-size:0.8rem;font-weight:700;}
+.upload-msg.ok{color:var(--green);} .upload-msg.err{color:var(--red);}
+.upload-mode-row{display:flex;gap:8px;margin-bottom:10px;}
+.upload-mode-btn{flex:1;padding:8px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);font-size:0.78rem;font-weight:700;color:var(--muted);cursor:pointer;text-align:center;font-family:'Zen Kaku Gothic New',sans-serif;transition:all 0.2s;}
+.upload-mode-btn.active{border-color:var(--blue);background:var(--blue-bg);color:var(--blue);}
+.back-btn{display:flex;align-items:center;gap:6px;background:none;border:none;color:var(--muted);font-size:0.85rem;font-weight:700;cursor:pointer;margin-bottom:14px;font-family:'Zen Kaku Gothic New',sans-serif;padding:0;}
+.back-btn:hover{color:var(--ink);}
+.quiz-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.quiz-tag{font-size:0.75rem;font-weight:900;color:var(--gold2);background:#fff3da;padding:4px 12px;border-radius:20px;border:1px solid #f5e0b0;}
+.quiz-timer{font-family:'Kaisei Decol',serif;font-size:0.9rem;font-weight:700;color:var(--muted);background:var(--surface2);padding:4px 12px;border-radius:20px;border:1px solid var(--border);}
+.quiz-timer.warn{color:var(--red);border-color:#ffd0d0;background:#fff5f5;}
+.quiz-progress-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.quiz-counter{font-size:0.82rem;font-weight:700;color:var(--muted);}
+.pct-label{font-size:0.75rem;color:var(--green);font-weight:900;}
+.progress-track{height:4px;background:var(--border);border-radius:2px;margin-bottom:22px;overflow:hidden;}
+.progress-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--gold),var(--green));transition:width 0.5s cubic-bezier(.4,0,.2,1);}
+.q-priority{display:inline-flex;align-items:center;gap:5px;font-size:0.72rem;font-weight:900;padding:3px 10px;border-radius:20px;margin-bottom:10px;}
+.q-priority.new-q{background:var(--blue-bg);color:var(--blue);}
+.q-priority.wrong-q{background:var(--red-bg);color:var(--red);}
+.q-priority.done-q{background:var(--surface2);color:var(--muted);}
+.quiz-question{font-size:1.02rem;font-weight:500;line-height:1.8;margin-bottom:20px;color:var(--ink);}
+.options-list{display:flex;flex-direction:column;gap:9px;}
+.opt-btn{display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--surface2);text-align:left;cursor:pointer;transition:all 0.18s;font-size:0.93rem;font-family:'Zen Kaku Gothic New',sans-serif;color:var(--ink);width:100%;}
+.opt-btn:hover:not(:disabled){border-color:var(--gold);background:#fff8ee;}
+.opt-btn:disabled{cursor:default;}
+.opt-btn.correct{border-color:var(--green);background:var(--green-bg);color:#065f46;}
+.opt-btn.wrong{border-color:var(--red);background:var(--red-bg);color:#991b1b;}
+.opt-btn.reveal{border-color:var(--green);background:var(--green-bg);color:#065f46;}
+.opt-label{min-width:28px;height:28px;border-radius:8px;background:var(--border);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:0.78rem;flex-shrink:0;transition:all 0.2s;}
+.opt-btn.correct .opt-label{background:var(--green);color:white;}
+.opt-btn.wrong .opt-label{background:var(--red);color:white;}
+.opt-btn.reveal .opt-label{background:var(--green);color:white;}
+.feedback{display:none;margin-top:14px;border-radius:var(--radius-sm);padding:14px 16px;animation:rise 0.25s ease;}
+.feedback.show{display:block;}
+.feedback.correct{background:var(--green-bg);border:1.5px solid var(--green);}
+.feedback.wrong{background:var(--red-bg);border:1.5px solid #ffb3b3;}
+.fb-title{font-size:1rem;font-weight:900;margin-bottom:5px;}
+.feedback.correct .fb-title{color:#065f46;}
+.feedback.wrong .fb-title{color:#c0392b;}
+.fb-text{font-size:0.85rem;line-height:1.7;color:var(--ink);}
+.fb-hint{font-size:0.78rem;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px solid rgba(0,0,0,0.07);font-style:italic;}
+.quiz-actions{display:flex;gap:8px;margin-top:14px;}
+.btn-next{flex:2;padding:13px;background:var(--ink);color:var(--gold);border:none;border-radius:var(--radius-sm);font-size:0.95rem;font-weight:900;cursor:pointer;font-family:'Zen Kaku Gothic New',sans-serif;transition:all 0.2s;}
+.btn-next:hover{background:var(--ink2);}
+.btn-skip{flex:1;padding:13px;background:none;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:0.85rem;font-weight:700;color:var(--muted);cursor:pointer;font-family:'Zen Kaku Gothic New',sans-serif;transition:all 0.2s;}
+.btn-skip:hover{border-color:var(--red);color:var(--red);}
+.btn-skip:disabled{opacity:0.35;cursor:default;}
+.result-hero{text-align:center;padding:8px 0 20px;}
+.result-grade{display:inline-block;font-family:'Kaisei Decol',serif;font-size:4rem;font-weight:700;background:linear-gradient(135deg,var(--gold),var(--red));-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1;margin-bottom:10px;}
+.result-pct{font-size:0.9rem;color:var(--muted);font-weight:700;margin-bottom:6px;}
+.result-title{font-family:'Kaisei Decol',serif;font-size:1.3rem;margin-bottom:4px;}
+.result-sub{font-size:0.83rem;color:var(--muted);}
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0;}
+.stat-box{background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:14px 10px;text-align:center;}
+.stat-n{font-family:'Kaisei Decol',serif;font-size:1.6rem;font-weight:700;display:block;}
+.stat-n.g{color:var(--green);} .stat-n.r{color:var(--red);} .stat-n.b{color:var(--blue);}
+.stat-lbl{font-size:0.72rem;color:var(--muted);font-weight:700;}
+.result-actions{display:flex;flex-direction:column;gap:9px;}
+.btn-re{width:100%;padding:14px;background:var(--ink);color:var(--gold);border:none;border-radius:var(--radius-sm);font-size:0.98rem;font-weight:900;cursor:pointer;font-family:'Zen Kaku Gothic New',sans-serif;transition:all 0.2s;}
+.btn-re:hover{background:var(--ink2);}
+.btn-outline{width:100%;padding:13px;background:none;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:0.9rem;font-weight:700;color:var(--ink);cursor:pointer;font-family:'Zen Kaku Gothic New',sans-serif;transition:all 0.2s;}
+.btn-outline:hover{border-color:var(--ink);}
+.wb-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+.wb-header h2{font-family:'Kaisei Decol',serif;font-size:1.2rem;}
+.wb-actions{display:flex;gap:8px;}
+.wb-btn{padding:7px 14px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);font-size:0.78rem;font-weight:700;color:var(--muted);cursor:pointer;font-family:'Zen Kaku Gothic New',sans-serif;transition:all 0.2s;}
+.wb-btn:hover{border-color:var(--ink);color:var(--ink);}
+.wb-btn.danger:hover{border-color:var(--red);color:var(--red);}
+.wb-item{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:10px;}
+.wb-item-top{display:flex;align-items:flex-start;gap:12px;margin-bottom:10px;}
+.wb-badge{min-width:38px;height:38px;background:var(--red-bg);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;}
+.wb-badge-n{font-weight:900;font-size:0.95rem;color:var(--red);line-height:1;}
+.wb-badge-l{font-size:0.58rem;color:var(--red);font-weight:700;}
+.wb-q-text{font-size:0.88rem;line-height:1.6;flex:1;}
+.wb-meta{font-size:0.72rem;color:var(--muted);margin-top:3px;}
+.wb-options{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:2px;}
+.wb-opt{display:flex;align-items:flex-start;gap:7px;padding:7px 10px;border-radius:8px;font-size:0.8rem;border:1.5px solid var(--border);background:var(--surface2);line-height:1.4;}
+.wb-opt.correct-opt{border-color:var(--green);background:var(--green-bg);color:#065f46;font-weight:700;}
+.wb-opt-label{min-width:20px;height:20px;border-radius:5px;background:var(--border);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:0.72rem;flex-shrink:0;}
+.wb-opt.correct-opt .wb-opt-label{background:var(--green);color:white;}
+.wb-analysis{font-size:0.78rem;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px solid var(--border);line-height:1.5;}
+.wb-empty{text-align:center;padding:40px 20px;color:var(--muted);}
+.wb-empty-icon{font-size:2.5rem;margin-bottom:10px;}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo">⚔️ 刷題競技場</div>
+  <div>
+    <button class="hbtn" onclick="showScreen('wrongbook')">
+      錯題本 <span class="badge" id="wrongBadge" style="display:none">0</span>
+    </button>
+  </div>
+</header>
+
+<div class="container">
+
+<!-- SETUP -->
+<div class="screen active" id="screen-setup">
+  <div class="setup-banner">
+    <h1>刷題競技場</h1>
+    <p>選擇範圍，挑戰自我！</p>
+  </div>
+  <div class="db-stats">
+    <div class="db-stat"><span class="db-stat-num gold" id="stat-total">0</span><span class="db-stat-label">題庫總題數</span></div>
+    <div class="db-stat"><span class="db-stat-num blue" id="stat-answered">0</span><span class="db-stat-label">已答題數</span></div>
+    <div class="db-stat"><span class="db-stat-num green" id="stat-wrong-total">0</span><span class="db-stat-label">錯題數</span></div>
+  </div>
+  <div class="reset-row">
+    <button class="reset-btn" onclick="resetAnswered()">🔄 清除答題紀錄</button>
+    <button class="reset-btn danger" onclick="resetAll()">🗑 全部重置</button>
+  </div>
+  <div class="card">
+    <div class="section-title" style="margin-bottom:14px">篩選範圍</div>
+    <div class="form-row">
+      <div class="form-group" style="margin:0"><label class="form-label">科目</label><select class="form-select" id="sel-subject" onchange="onFilterChange()"><option value="">全部</option></select></div>
+      <div class="form-group" style="margin:0"><label class="form-label">年級</label><select class="form-select" id="sel-grade" onchange="onFilterChange()"><option value="">全部</option></select></div>
+    </div>
+    <div class="form-group"><label class="form-label">段考</label><select class="form-select" id="sel-exam" onchange="onFilterChange()"><option value="">全部</option></select></div>
+    <div class="form-group">
+      <label class="form-label">單元（可多選，不選則全部）</label>
+      <div class="unit-grid" id="unit-grid"><span class="unit-chip all-chip active" onclick="toggleUnit('all',this)">全部單元</span></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">練習模式</label>
+      <div class="mode-row">
+        <button class="mode-btn active" onclick="setMode('all',this)">📖 全部題目</button>
+        <button class="mode-btn" onclick="setMode('wrong',this)">🔴 錯題複習</button>
+        <button class="mode-btn" onclick="setMode('new',this)">🔵 只出新題</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">題目數量</label>
+      <div class="slider-wrap">
+        <input type="range" id="q-slider" min="1" max="50" value="10" oninput="onSlider(this)">
+        <div class="slider-num" id="slider-val">10</div>
+      </div>
+      <div class="slider-hint" id="slider-hint">共 0 題，出 10 題</div>
+      <div class="priority-bar">
+        <div class="pitem"><div class="priority-dot" style="background:var(--blue)"></div>未答 <strong id="pb-new">0</strong></div>
+        <div class="pitem"><div class="priority-dot" style="background:var(--red)"></div>錯過 <strong id="pb-wrong">0</strong></div>
+        <div class="pitem"><div class="priority-dot" style="background:var(--green)"></div>答對 <strong id="pb-done">0</strong></div>
+        <span style="font-size:0.72rem;color:var(--muted);margin-left:4px">↑ 出題優先順序</span>
+      </div>
+    </div>
+    <button class="btn-start" id="start-btn" onclick="startQuiz()">開始測驗 ⚔️</button>
+  </div>
+  <div class="card">
+    <div class="section-title" style="margin-bottom:10px">📂 更新題庫（上傳 xlsx）</div>
+    <div class="upload-mode-row">
+      <button class="upload-mode-btn active" onclick="setUploadMode('merge',this)">🔗 合併更新</button>
+      <button class="upload-mode-btn" onclick="setUploadMode('replace',this)">🔄 完整替換</button>
+    </div>
+    <div class="upload-zone">
+      <input type="file" accept=".xlsx,.xls" onchange="handleUpload(this)">
+      <div class="upload-icon">📊</div>
+      <div class="upload-text">點擊上傳 <strong>xlsx 題庫</strong><br><span style="font-size:0.72rem">支援多 Sheet，每個 Sheet 為一個科目</span></div>
+    </div>
+    <div class="upload-msg" id="uploadMsg"></div>
+  </div>
+</div>
+
+<!-- QUIZ -->
+<div class="screen" id="screen-quiz">
+  <button class="back-btn" onclick="confirmBack()">← 返回設定</button>
+  <div class="card">
+    <div class="quiz-topbar">
+      <span class="quiz-tag" id="quiz-tag">英文・段考</span>
+      <span class="quiz-timer" id="quiz-timer">00:00</span>
+    </div>
+    <div class="quiz-progress-row">
+      <span class="quiz-counter" id="quiz-counter">第 1 / 10 題</span>
+      <span class="pct-label" id="quiz-correct-rate">答對率 —</span>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+    <div id="q-priority-badge"></div>
+    <div class="quiz-question" id="quiz-question"></div>
+    <div class="options-list" id="options-list"></div>
+    <div class="feedback" id="feedback">
+      <div class="fb-title" id="fb-title"></div>
+      <div class="fb-text" id="fb-text"></div>
+      <div class="fb-hint" id="fb-hint"></div>
+    </div>
+    <div class="quiz-actions">
+      <button class="btn-skip" id="btn-skip" onclick="skipQ()">跳過此題</button>
+      <button class="btn-next" id="btn-next" onclick="nextQ()" style="display:none">下一題 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESULT -->
+<div class="screen" id="screen-result">
+  <div class="card">
+    <div class="result-hero">
+      <div class="result-grade" id="result-grade">A</div>
+      <div class="result-pct" id="result-pct">正確率 0%</div>
+      <div class="result-title" id="result-title">測驗完成！</div>
+      <div class="result-sub" id="result-sub"></div>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-box"><span class="stat-n g" id="res-correct">0</span><span class="stat-lbl">答對</span></div>
+      <div class="stat-box"><span class="stat-n r" id="res-wrong">0</span><span class="stat-lbl">答錯</span></div>
+      <div class="stat-box"><span class="stat-n b" id="res-skip">0</span><span class="stat-lbl">跳過</span></div>
+    </div>
+    <div class="result-actions">
+      <button class="btn-re" onclick="showScreen('setup')">🔄 再來一次</button>
+      <button class="btn-outline" onclick="showScreen('wrongbook')">📖 查看錯題本</button>
+      <button class="btn-outline" onclick="exportWrongXLSX()">⬇️ 匯出錯題 xlsx</button>
+    </div>
+  </div>
+</div>
+
+<!-- WRONGBOOK -->
+<div class="screen" id="screen-wrongbook">
+  <button class="back-btn" onclick="showScreen('setup')">← 返回設定</button>
+  <div class="card">
+    <div class="wb-header">
+      <h2>🔴 錯題本</h2>
+      <div class="wb-actions">
+        <button class="wb-btn" onclick="exportWrongXLSX()">⬇️ 匯出 xlsx</button>
+        <button class="wb-btn danger" onclick="clearWrongBook()">🗑 清除</button>
+      </div>
+    </div>
+    <div id="wb-list"></div>
+  </div>
+</div>
+
+</div>
+
+<script>
+// ── 內建題庫 ──────────────────────────────
+const BUILTIN_DB = [{"no":"1","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"康軒A卷","question":"下列選項「　」中的形近字，何組讀音前後相同？","option_a":"推「卸」責任／燕子「御」寒","option_b":"抽水幫「浦」／「鋪」天蓋地","option_c":"「躊躇」滿志／略勝一「籌」","option_d":"中元普「渡」／來回「踱」步","answer":"C","analysis":"(A)ㄒㄧㄝˋ／ㄩˋ (B)ㄆㄨˇ／ㄆㄨ (C)ㄔㄡˊ (D)ㄉㄨˋ／ㄉㄨㄛˋ","hint":""},{"no":"2","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"康軒A卷","question":"下列「　」中的注音寫成國字後，何組字形前後相同？","option_a":"「ㄑㄧㄥ」家蕩產／公「ㄑㄧㄥ」大臣","option_b":"恕不奉「ㄆㄟˊ」／用心栽「ㄆㄟˊ」","option_c":"黃「ㄆㄠˊ」加身／「ㄆㄠˊ」澤故舊","option_d":"「ㄕˋ」目以待／躍躍欲「ㄕˋ」","answer":"C","analysis":"(A)傾／卿 (B)陪／培 (C)袍 (D)拭／試","hint":""},{"no":"3","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"康軒A卷","question":"下列選項「　」中的字，何組意思前後相同？","option_a":"「望」車外看／一「望」無際","option_b":"「穿」過鐵道／望「穿」秋水","option_c":"「費」盡心機／大「費」周章","option_d":"情「鬱」於中／內心憂「鬱」","answer":"C","analysis":"(A)向、朝／向遠處或高處看 (B)貫通、通過／透澈、明白、顯明 (C)花用、消耗 (D)積聚／愁悶的","hint":""},{"no":"4","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"康軒A卷","question":"下列文句「　」中的古代用語，何者意思說明正確？","option_a":"這些「盤纏」你務必帶在身上，以備不時之需：旅費","option_b":"他正與「腳夫」講價錢：司機","option_c":"那位「郎中」涉嫌詐欺，真令人不齒：學者","option_d":"他是一位聲名遠播的「庖丁」：木匠","answer":"A","analysis":"(B)搬運工人 (C)醫生的俗稱 (D)廚師","hint":""},{"no":"5","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"康軒A卷","question":"下列文句「　」中的詞語，何者運用最恰當？","option_a":"活動結束後滿地「瑣屑」，大家趕緊動手清理","option_b":"他退休後遭遇詐騙，退休金被騙光，「老境」淒涼","option_c":"下捷運時，我不小心將手機「勾留」在車廂內","option_d":"完工的新大樓看起來富麗「頹唐」，相當氣派","answer":"B","analysis":"(A)瑣細零碎，宜作「紙屑」 (B)老年時的景況 (C)因事停留，宜作「遺留」 (D)衰微、淒涼，宜作「堂皇」","hint":""},{"no":"6","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"康軒A卷","question":"「大約大去之期不遠矣」一句的意思，與下列哪一個成語最相近？","option_a":"溘然長逝","option_b":"風中殘燭","option_c":"音容宛在","option_d":"撒手塵寰","answer":"B","analysis":"(A)謂人死亡 (B)比喻人已衰老，行將不久於世 (C)人的聲音與容貌彷若在眼前，多用於弔唁之詞 (D)離開人世間，即死亡","hint":""},{"no":"7","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"康軒A卷","question":"「唉！我現在想想，那時真是太聰明了！」這句話運用了倒反修辭技巧，下列何者與之相同？","option_a":"日子如浪花，翻到半空高，復又退下漸漸消散在海風裡","option_b":"時間就好像閃電一樣，快得讓人看不清楚","option_c":"你真大方，連一片餅乾都捨不得給他","option_d":"路，像無數縱橫交錯的血管，聯繫各個不同的體系","answer":"C","analysis":"(A)(B)(D)為譬喻修辭","hint":""},{"no":"8","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"康軒A卷","question":"下列選項「　」中的字，何者詞性與其他三者不同？","option_a":"「渡」江到浦口","option_b":"「頗」躊躇了一會","option_c":"他「囑」我路上小心","option_d":"「舉」著提筆","answer":"B","analysis":"(A)(C)(D)動詞 (B)副詞","hint":""},{"no":"9","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"康軒A卷","question":"下列文句的語氣，何者說明正確？","option_a":"我那時真是聰明過分：輕視","option_b":"難道還不能料理自己麼：自責","option_c":"我走了，到那邊來信：自信","option_d":"大約大去之期不遠矣：推測","answer":"D","analysis":"(A)自責 (B)反詰 (C)叮嚀","hint":""},{"no":"10","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"康軒A卷","question":"「他囑我路上小心……唉！我現在想想，那時真是太聰明了！」這段話旨在闡述下列何者？","option_a":"作者的溝通技巧比父親好","option_b":"作者已知人情冷暖，不勞父親費心","option_c":"作者當時未能體會父愛，如今已感到懊悔","option_d":"作者比父親聰明，同情父親不懂人情世故","answer":"C","analysis":"","hint":""},{"no":"11","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"康軒A卷","question":"作者描述父親「將橘子一股腦兒放在我的皮大衣上」，這句話象徵的意義為何？","option_a":"父親把自己的愛毫無保留的給了兒子","option_b":"父親明白作者即將遠離故鄉，不再回來","option_c":"父親將全家最後的財產孤注一擲在作者身上","option_d":"父親氣惱作者年輕氣盛，不了解自己的苦心","answer":"A","analysis":"","hint":""},{"no":"12","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"康軒A卷","question":"在〈背影〉一文中，作者描繪父親「再三囑咐茶房」、「終於不放心」、「頗躊躇了一會」的形象，其用意為何？","option_a":"表達父親記憶力衰退","option_b":"強調孩子雖已長大，父親仍然百般牽掛","option_c":"描述父親性格優柔寡斷，做事不乾脆","option_d":"點出父親社會經驗豐富，知道旁人不可靠","answer":"B","analysis":"作者的父親出於對兒子的關愛，儘管請託熟識的茶房也仍不放心，決定親自送行","hint":""},{"no":"13","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"康軒A卷","question":"在〈背影〉一文中，作者望著父親為了幫他買橘子，艱難的上下月臺的背影，忍不住流下眼淚，其原因為何？","option_a":"為父親的健康狀況而憂愁","option_b":"為父親對自己的關愛而感動","option_c":"為父親的安危而焦慮","option_d":"為父親時日無多而感到難過","answer":"B","analysis":"","hint":""},{"no":"14","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"康軒A卷","question":"在〈背影〉一文中，作者的父親買了橘子回來後心裡感到輕鬆，其原因應是下列何者？","option_a":"兒子終於肯收下橘子","option_b":"兒子前來關心自己，令父親深感欣慰","option_c":"吃力的爬上月臺後，終於買到了橘子","option_d":"將兒子旅途中的事都安排妥當","answer":"D","analysis":"","hint":""},{"no":"15","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"康軒A卷","question":"〈背影〉一文中描寫父親與腳夫們講價錢，後寫道「但他終於講定了價錢」，「但」與「終於」最可能有哪些含義？(甲)肯定父親處理事情面面俱到 (乙)不相信父親能講好價錢 (丙)認為父親做事效率不高 (丁)人心不古，擔心父親上當","option_a":"甲乙","option_b":"甲丁","option_c":"乙丙","option_d":"丙丁","answer":"C","analysis":"「但」為轉折語氣，後接「講定了價錢」，可知作者原本認為父親不能講好價錢；「終於」表示經過種種變化或等待之後，可推測出作者認為父親做事效率不高","hint":""},{"no":"16","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"康軒A卷","question":"「為什麼天下總有流不盡的『子欲養而親不待』的眼淚？為什麼世上總有唱不完的『樹欲靜而風不止』的哀歌呢？」這段話旨在提醒我們下列何種道理？","option_a":"把握當下，及時行孝","option_b":"積福積德，及時行善","option_c":"人生幾何，及時行樂","option_d":"路見不平，行俠仗義","answer":"A","analysis":"","hint":""},{"no":"17","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"康軒A卷","question":"「我僅拇指姑娘那般大時，外婆就攜我上市場……便不覺時光殘酷。」根據這段話，作者不覺時光殘酷的原因最可能為何？","option_a":"老鋪隨時代潮流推陳出新","option_b":"外孫女已經能獨立生活","option_c":"過往生活記憶的場所仍在","option_d":"童年生活快樂而充實","answer":"C","analysis":"","hint":""},{"no":"18","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"康軒A卷","question":"下列文句中的標點符號，何者使用正確？","option_a":"我愛熱鬧，也愛冷靜；愛群居、也愛獨處。","option_b":"我們默然的對著，靜聽那汩——汨的槳聲。","option_c":"在逃去如飛的日子裡！在千門萬戶的世界裡的我能做些什麼呢？","option_d":"桃樹、杏樹、梨樹，你不讓我？我不讓你，都開滿了花趕趟兒。","answer":"B","analysis":"","hint":""},{"no":"19","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"康軒A卷","question":"「如果沒有離別，人就不能真正珍惜相聚的時刻；如果沒有離別，人間就再也沒有重逢的喜悅。」這段文字主要在說明什麼？","option_a":"離別讓相處的時間變得更可貴","option_b":"人應該在離別的時候，好好與對方道別","option_c":"離別時應該懷著不再重逢的心情向對方道別","option_d":"離別比起相聚更令人珍惜","answer":"A","analysis":"","hint":""},{"no":"20","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"康軒A卷","question":"一位母親說：「真像一臺戲啊！你們一個個下臺去了，哪天，這幢樓，怕就剩下我一個囉！」根據這段話，這位母親最可能是在感嘆下列何者？","option_a":"丈夫早死，母子孤苦無依","option_b":"兒女長大後紛紛離家","option_c":"家道中落，生活困難","option_d":"健康不佳，生命短暫","answer":"B","analysis":"","hint":""},{"no":"21","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"康軒A卷","question":"「朱自清的散文作品可以分為三類：一是家庭小品，如〈背影〉……三是寫景美文，如〈荷塘月色〉……」關於這段文字，下列敘述何者正確？","option_a":"先分析朱自清各項作品的內涵，再總括其行文特色","option_b":"先點出朱自清散文的各種風格，再分別細述","option_c":"先列舉朱自清的各種作品，再一一分類","option_d":"先說明朱自清散文作品的類別，再分別舉例","answer":"D","analysis":"","hint":""},{"no":"22","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"康軒A卷","question":"「我是當了爸爸後，才學會當爸爸的。」根據這句廣告詞，下列何者最接近這位父親的想法？","option_a":"認為照顧小孩是母親該做的事","option_b":"悔恨沒有扮演好父親的角色","option_c":"深深體會到為人父的責任","option_d":"自嘲不懂如何揣摩角色","answer":"C","analysis":"","hint":""},{"no":"23","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"康軒A卷","question":"「父母之年，不可不知也。一則以喜，一則以懼。」（論語）關於這句話的說明，下列何者正確？","option_a":"知道父母的年紀後，慶幸還能受到父母更多的照顧","option_b":"無論父母的年齡為何，皆須以同樣的方式照顧父母","option_c":"無論自己幾歲，只要留在父母身旁就可享天倫之樂","option_d":"隨著父母年紀漸長，就擔憂能孝順父母的時日不多","answer":"D","analysis":"","hint":""},{"no":"24","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"康軒A卷","question":"「翠鳥先高作巢以避患。及生子，愛之，恐墜，稍下作巢。子長羽毛，復益愛之，又更下巢，而人遂得而取之矣。」這段文字主要在表達下列何種含義？","option_a":"虎毒不食子","option_b":"愛之適足以害之","option_c":"龍生龍，鳳生鳳","option_d":"不見棺材不掉淚","answer":"B","analysis":"【語譯】翠鳥先是把巢築在高處以躲避災禍。等到生下雛鳥後，因為愛護牠，怕牠從高處墜下，所以把巢築在稍微低一點的位置。雛鳥長出羽毛後，又更加愛護牠，所以又將巢往下築，於是人們就可以輕鬆抓到鳥了。","hint":""},{"no":"25","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"康軒A卷","question":"「曾子有疾，召門弟子曰：『啟予足！啟予手！詩云：「戰戰兢兢，如臨深淵，如履薄冰。」而今而後，吾知免夫！』」這段文字中提到的盡孝方式，與下列何者最相近？","option_a":"事親以敬，美過三牲","option_b":"身體髮膚，受之父母，不敢毀傷","option_c":"大孝尊親，其次弗辱，其下能養","option_d":"有事，弟子服其勞；有酒食，先生饌","answer":"B","analysis":"","hint":""},{"no":"26","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L5","source":"康軒A卷","question":"下列選項「　」中的形近字，何組讀音前後相同？","option_a":"跳「躍」／光「耀」","option_b":"橄「欖」／一「覽」無遺","option_c":"天「籟」／水「獺」","option_d":"「宛」轉／令人「扼腕」","answer":"B","analysis":"","hint":""},{"no":"27","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L5","source":"康軒A卷","question":"下列文句，何者用字完全正確？","option_a":"剪輯後的影片濃縮了全場演唱會的重要片段","option_b":"秋冬之際喝熱滕滕的薑湯有助保健","option_c":"惡作據可能會造成無法挽回的憾事","option_d":"這家魷魚羹的滋味在臺南手屈一指","answer":"A","analysis":"","hint":""},{"no":"28","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L5","source":"康軒A卷","question":"下列選項「　」中的字，何組意思前後相同？","option_a":"「具」體而微／舞臺道「具」","option_b":"「抑」揚頓挫／扶弱「抑」強","option_c":"「乍」暖還寒／新來「乍」到","option_d":"「斗」室生輝／「斗」膽","answer":"C","analysis":"","hint":""},{"no":"29","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L5","source":"康軒A卷","question":"下列文句「　」中的詞語，何者使用最恰當？","option_a":"我保證「照例」陳述，絕不說謊","option_b":"工程「適時」耗日，三年五載也無法完工","option_c":"天氣燥熱，加上事情繁多，使得他心情非常「納悶」","option_d":"歷史在時間「推移」的過程中不斷演變","answer":"D","analysis":"","hint":""},{"no":"30","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L5","source":"康軒A卷","question":"「一成不變」之於「千變萬化」的含義關係，猶如「慢條斯理」之於下列何者？","option_a":"鬧中取靜","option_b":"不近情理","option_c":"朝令夕改","option_d":"驚慌失措","answer":"D","analysis":"","hint":""},{"no":"31","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L5","source":"康軒A卷","question":"下列文句「　」中的成語，何者使用最恰當？","option_a":"經過協商，勞資雙方仍然「餘音繞梁」，沒有共識","option_b":"他是「新鶯出谷」的社會新鮮人，尚缺乏足夠的歷練","option_c":"隨著人工智慧浪潮出現，相關產業也「應運而起」","option_d":"主管力求「墨守成規」，常留意新趨勢帶來的商機","answer":"C","analysis":"","hint":""},{"no":"32","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L5","source":"康軒A卷","question":"下列文句，何者文意通暢，用詞最為恰當？","option_a":"這裡生活機能不佳，真是慢條斯理","option_b":"維持規律的運動習慣，可使身材宛轉有致","option_c":"長期局限在這斗室中，久而久之便煩悶不已","option_d":"乍暖還寒的天氣真是宜人，整天都十分舒適","answer":"C","analysis":"","hint":""},{"no":"33","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L5","source":"康軒A卷","question":"「那位賣蝦仁羹的歐巴桑的叫賣聲恐怕是最平板無奇的。」這句話的語氣與下列何者相同？","option_a":"這家店的鐵門拉下一半，應該是準備打烊了","option_b":"雖然只是粗茶淡飯，卻蘊含了美好的滋味啊","option_c":"候選人的演說內容實在乏味，令人昏昏欲睡","option_d":"若能靜下心來聆聽，就能感受音樂的美好","answer":"A","analysis":"","hint":""},{"no":"34","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L5","source":"康軒A卷","question":"「如果你在心裡一遍遍學著，你一定可以聽到跟牛犁歌或丟丟銅仔一樣鮮活有趣的旋律。」根據這段文字，下列敘述何者正確？","option_a":"熱情的叫賣聲難以模仿","option_b":"叫賣聲具有民謠韻味，引發懷舊的鄉土情懷","option_c":"小販使用各國語言叫賣，風格獨特","option_d":"叫賣聲與民謠的節奏相近，廣為流傳","answer":"B","analysis":"","hint":""},{"no":"35","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L5","source":"康軒A卷","question":"「但這些鐘可不是一成不變地只會敲著『噹、噹、噹』的聲音，或者每隔一個鐘頭伸出一隻小鳥，『布穀、布穀』地向你報時。」根據這段文字，可知這些像鐘的叫賣聲令人有何種感覺？","option_a":"乏味與無聊","option_b":"多變與趣味","option_c":"欣慰與悠閒","option_d":"沉悶與痛苦","answer":"B","analysis":"","hint":""},{"no":"36","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L5","source":"康軒A卷","question":"「那位賣蝦仁羹的歐巴桑的叫賣聲恐怕是最平板無奇的，但還沒看到她就拿著大碗小碗衝出來的大人小孩，每天不知凡幾。」根據這段文字，下列敘述何者正確？","option_a":"歐巴桑因叫賣聲特別嘹亮，故生意興隆","option_b":"愈平板無奇的叫賣聲，反而愈容易吸引客人的注意","option_c":"歐巴桑的叫賣聲雖不特出，但仍有許多忠實顧客","option_d":"歐巴桑因叫賣聲平凡，故生意清淡","answer":"C","analysis":"","hint":""},{"no":"37","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L5","source":"康軒A卷","question":"下列文句，何者最具驚喜之感？","option_a":"郵差來按門鈴，你知道現在是早上十點半了","option_b":"但還沒看到她就拿著大碗小碗衝出來的大人小孩，每天不知凡幾","option_c":"但就在你懷疑、納悶的時候，那熟悉的聲音也許又出現了","option_d":"這些聲音鐘不但告訴你時刻，也告訴你星期、季節","answer":"C","analysis":"","hint":""},{"no":"38","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L5","source":"康軒A卷","question":"「昨天晚上你也許還吃著燒仙草，今天你忽然聽到他改叫『冷豆花哦』——這一叫，又讓你驚覺春天的確來了。」這段文字主要在闡述下列何者？","option_a":"朝夕的交替","option_b":"心境的轉換","option_c":"口味的改變","option_d":"季節的更迭","answer":"D","analysis":"","hint":""},{"no":"39","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L5","source":"康軒A卷","question":"「這些美妙的叫賣聲，活潑、快樂地在每日生活的舞臺裡翻滾跳躍。他們像陽光、綠野、花一樣，是這有活力的城市，有活力的人間，不可或缺的色彩。」這段文字的含義為何？","option_a":"叫賣聲將生活裝點得繽紛有趣","option_b":"陽光、綠野和花猶如大自然的叫賣聲","option_c":"有活力的城市，必有陽光、綠野和花","option_d":"城市因提供人們跳躍的舞臺而充滿活力","answer":"A","analysis":"","hint":""},{"no":"40","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L5","source":"康軒A卷","question":"在〈聲音鐘〉一文中，作者將小販的叫賣聲比喻為時鐘，其原因為何？","option_a":"叫賣聲出現的時段有一定規律","option_b":"作者熱愛聽鐘聲","option_c":"作者藉此稱讚小販工作認真","option_d":"作者與小販的作息時間相同","answer":"A","analysis":"","hint":""},{"no":"41","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L5","source":"康軒A卷","question":"「那些喧囂交雜的聲音□放肆挑逗的氣味，以及刺激奪目的顏色，有時候無比清晰□有時候泛白模糊，我不免要疑惑，那些官覺庫存都是真實的嗎□」句中缺空處依序填入下列何組標點符號最恰當？","option_a":"，……！","option_b":"、，？","option_c":"、！。","option_d":"，；？","answer":"B","analysis":"","hint":""},{"no":"42","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L5","source":"康軒A卷","question":"「回想生命中曾經的美好時刻，當時的處境與心情所交織而成的寶貴經驗，至今仍無法被取代。」根據這段文字，下列說明何者正確？","option_a":"美好的事物總是容易消逝","option_b":"過往的美好經驗是無與倫比的寶物","option_c":"往昔的離愁別恨至今仍縈繞心頭","option_d":"唯有活在當下的人才能創造美好回憶","answer":"B","analysis":"","hint":""},{"no":"43","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L5","source":"康軒A卷","question":"「天然仙草顏色較黑……加熱後就會融化至液體狀，立刻『原形畢露』。」這段文字主要在說明什麼？","option_a":"仙草的由來","option_b":"製作仙草的方法","option_c":"色澤對仙草的影響","option_d":"分辨天然仙草的方式","answer":"D","analysis":"","hint":""},{"no":"44","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L5","source":"康軒A卷","question":"「玉漏銅壺且莫催，鐵關金鎖徹明開。誰家見月能閒坐，何處聞燈不看來。」這首詩描寫的節慶為何？","option_a":"春節","option_b":"七夕","option_c":"元宵節","option_d":"中秋節","answer":"C","analysis":"","hint":""},{"no":"45","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L5","source":"康軒A卷","question":"「生活的詩人不是生活如『詩』，而是內心不願接受現實的規範，總以某種瞬間的狂喜輕輕嘲諷既定的步調。」根據這段文字，下列說明何者正確？","option_a":"成為生活的詩人才能活得像一首詩","option_b":"學會寫詩，才能成為生活的詩人","option_c":"應向詩人學習面對挫折的智慧","option_d":"不要讓心靈受限於現實生活","answer":"D","analysis":"","hint":""},{"no":"46","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L5","source":"康軒A卷","question":"「就在一杯好茶的氛圍之中……我的內心又重回一片清明。」根據這段文字，下列說明何者正確？","option_a":"好茶、好書、好友是作者忘憂的法寶","option_b":"人生太多傷心事，唯有茶香能解憂","option_c":"故鄉生產的茶種，喝了能讓人忘卻俗慮","option_d":"作者藉茶忘憂，以酒解愁","answer":"A","analysis":"","hint":""},{"no":"47","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L5","source":"康軒A卷","question":"「冷泉亭在山下。春之日，吾愛其草薰薰，木欣欣……夏之夜，吾愛其泉渟渟，風泠泠……」根據這段文字，下列何者不是作者喜歡冷泉亭的原因？","option_a":"空氣清新","option_b":"草木茂盛","option_c":"清風涼爽","option_d":"四季分明","answer":"D","analysis":"","hint":""},{"no":"48","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L5","source":"康軒A卷","question":"「這條魚被折騰得黑色褐色混雜……彷彿苞蕾在長久醞釀後，啵的一聲掙脫萼片拘束，張開第一片花瓣。」這段文字主要在說明什麼？","option_a":"形容食物色香味俱全","option_b":"描述食物滋味超乎想像的驚喜","option_c":"抒發對於食物不符合期待的失望","option_d":"說明生命總要冒險，才能挖掘出美好事物的道理","answer":"B","analysis":"","hint":""},{"no":"49","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L5","source":"康軒A卷","question":"「大石側立千仞……又有若老人咳且笑於山谷中者，或曰此鸛鶴也。」根據這段文字，下列何者是作者實際聽到的聲音？","option_a":"人聲、鶻鳴","option_b":"猛獸聲、人聲、回聲","option_c":"鸛鶴拍翅聲、老人咳且笑聲","option_d":"猛獸聲、老人咳且笑聲","answer":"A","analysis":"","hint":""},{"no":"50","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L5","source":"康軒A卷","question":"「比如你隨便到哪一家服裝賣場，耳朵裡都會一直有售貨員的叫賣聲……顧客會順著這些聲音走過去，選他們想要的新款……」這段文字主要在說明什麼？","option_a":"吵雜的服裝賣場會減低顧客消費的欲望","option_b":"顧客須分辨售貨員話術的真偽","option_c":"叫賣聲能夠吸引人們購買商品","option_d":"不實的銷售話術會引起消費者反感","answer":"C","analysis":"","hint":""},{"no":"51","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L6","source":"康軒A卷","question":"下列「　」中的注音寫成國字後，何組字形前後相同？","option_a":"「ㄧㄢˊ」路賞螢／綿「ㄧㄢˊ」","option_b":"「ㄆㄧㄢ」然起舞／「ㄆㄧㄢ」袒","option_c":"淺嘗「ㄓㄜˊ」止／動「ㄓㄜˊ」得咎","option_d":"「ㄌㄧㄠˊ」若晨星／「ㄌㄧㄠˊ」表寸心","answer":"C","analysis":"","hint":""},{"no":"52","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L6","source":"康軒A卷","question":"下列選項「　」中的字，何者讀音與其他三者不同？","option_a":"曉「悟」","option_b":"「晤」談","option_c":"魁「梧」","option_d":"「寤」寐","answer":"C","analysis":"","hint":""},{"no":"53","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L6","source":"康軒A卷","question":"「雖然只是那一小點光亮，卻讓人彷彿有了一燈相照的感覺。」句中「相」字的意思，與下列何者相同？","option_a":"實不「相」瞞","option_b":"兩地「相」思","option_c":"同病「相」憐","option_d":"「相」得益彰","answer":"A","analysis":"","hint":""},{"no":"54","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L6","source":"康軒A卷","question":"「直到我住進了這個山村……在這裡我不再牽掛、等待，身心得以舒展安放，□□□□。」句中缺空處應填入下列何者最恰當？","option_a":"大放厥詞","option_b":"別有居心","option_c":"通情達理","option_d":"悠然自適","answer":"D","analysis":"","hint":""},{"no":"55","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L6","source":"康軒A卷","question":"下列文句「　」中的詞語經替換後，何者文意不變？","option_a":"孩子體貼的心思讓他感到「寬慰」／寬容","option_b":"小柯希望能「邂逅」一個知心的人／尋覓","option_c":"山上草木「叢生」，人跡罕至／密切","option_d":"他運用許多不同顏色的氣球，將會場「點綴」得繽紛極了／裝飾","answer":"D","analysis":"","hint":""},{"no":"56","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L6","source":"康軒A卷","question":"下列文句「　」中的成語，何者運用最恰當？","option_a":"兄長「蕙質蘭心」，長輩皆讚美他具有極佳的品行","option_b":"我們想不到其他方法，已到「山窮水盡」的地步","option_c":"颱風來時切勿獨自登山，以免遇難而有「遺珠之憾」","option_d":"他「詞不達意」，從言語中能感受到他的真心","answer":"B","analysis":"","hint":""},{"no":"57","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L6","source":"康軒A卷","question":"(甲)山澗流水淙淙，枝頭幾聲鳥語，在靜靜的清晨中，分外清脆悅耳 (乙)咬破柚子的果粒，先是沁出微微的酸味，接著一股清香甘甜入喉 (丙)一隻螢火蟲從草叢裡飛了出來，接著兩隻、三隻…… (丁)透過手掌，有一股熱流，沸沸然湧進了我的心臟。上述文句依「視覺、聽覺、觸覺、味覺」排列，正確順序為何？","option_a":"丙甲丁乙","option_b":"丙丁甲乙","option_c":"丁甲乙丙","option_d":"丁丙乙甲","answer":"A","analysis":"","hint":""},{"no":"58","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L6","source":"康軒A卷","question":"下列文句「　」中的字，何者詞性說明正確？","option_a":"那天「深」夜：副詞","option_b":"每當夏夜，總是螢火「紛」飛：動詞","option_c":"再難有如此「盛」況了：形容詞","option_d":"老人們都說是腐草所「化」：名詞","answer":"C","analysis":"","hint":""},{"no":"59","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L6","source":"康軒A卷","question":"下列文句，何者沒有冗詞贅字？","option_a":"公園中百花綻放，一片春和景明","option_b":"這片耕地上有許多農舍錯落差其中","option_c":"三更半夜街頭依然照舊有許多人不回家","option_d":"我們特地專程到陽明山看螢火蟲","answer":"A","analysis":"","hint":""},{"no":"60","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L6","source":"康軒A卷","question":"「閨秀人家用紈扇和螢共玩」一句所呈現的景象，與下列何者最相近？","option_a":"輕羅小扇撲流螢","option_b":"簾疏巧入坐人衣","option_c":"殘螢樓玉露，早雁拂金河","option_d":"山花如繡頰，江火似流螢","answer":"A","analysis":"","hint":""},{"no":"61","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L6","source":"康軒A卷","question":"「本將秋草並，今與夕風輕。騰空類星隕，拂木若花生。屏疑神火照，簾似夜珠明。逢君拾光彩，不怯此身傾。」關於這首詩，下列說明何者錯誤？","option_a":"「今與夕風輕」是描寫螢火蟲隨著晚風輕盈的飛舞","option_b":"詩人用星星墜落、花謝、神火、夜明珠來比喻螢火","option_c":"「騰空類星隕，拂木若花生」寫螢光在空中飛舞的絢麗","option_d":"詩人認為螢火蟲是由秋天枯萎的草化生而成","answer":"B","analysis":"","hint":""},{"no":"62","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L6","source":"康軒A卷","question":"「未足臨書卷，時能點客衣。」這兩句詩的含義為何？","option_a":"螢火賦予貧士一線希望","option_b":"螢火能安慰遊子的寂寥","option_c":"螢火宛如優美詩句","option_d":"螢火蟲飛舞的姿態富有情趣","answer":"B","analysis":"","hint":""},{"no":"63","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L6","source":"康軒A卷","question":"「一隻螢火蟲從草叢裡飛了出來，接著兩隻、三隻……，儘管沒有群螢亂飛的盛況，但看著那翩翩舞姿，就足以動人風懷。」這段文字主要在描寫什麼？","option_a":"與螢火蟲照面，滿心歡喜","option_b":"深夜返家，途中意外撞見螢火蟲","option_c":"小時候常見的螢火蟲，數量銳減中","option_d":"螢火蟲出現的數量太少，觀賞樂趣盡失","answer":"A","analysis":"","hint":""},{"no":"64","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L6","source":"康軒A卷","question":"關於〈今夜看螢去〉一文的特色，下列敘述何者正確？","option_a":"以長篇的議論，關懷自然保育及社會公益","option_b":"以科學角度評析螢的生態，風格嚴肅知性","option_c":"以「山精水靈」等鬼怪，為全文增添詭譎的色彩","option_d":"以「今夜」與「童年」兩條看螢的線索開展，隱含內心的喟嘆","answer":"D","analysis":"","hint":""},{"no":"65","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L6","source":"康軒A卷","question":"關於字體的敘述，下列說明何者正確？","option_a":"籀文是指鑄刻在青銅器上面的文字","option_b":"顏真卿、柳公權皆是擅長草書的書法家","option_c":"小篆是春秋戰國時代通行於秦國的字體，說文解字保存了它的形貌","option_d":"甲骨文出土於殷都遺址，又稱為「卜辭」","answer":"D","analysis":"","hint":""},{"no":"66","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L6","source":"康軒A卷","question":"下列詩句，何者描寫了秋天的風景？","option_a":"山光照檻水繞廊，舞雩歸詠春風香","option_b":"可憐九月初三夜，露似真珠月似弓","option_c":"唯有南風舊相識，偷開門戶又翻書","option_d":"萬里寒光生積雪，三邊曙色動危旌","answer":"B","analysis":"","hint":""},{"no":"67","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L6","source":"康軒A卷","question":"「『東窩溪螢火蟲生態區』位於內灣後山……每年四月至五月，百萬隻螢火蟲群聚在清澈的東窩野溪，美麗壯觀如星河，吸引眾多的賞螢遊客。」這段文字主要在說明下列何者？","option_a":"呼籲遊客勿破壞生態","option_b":"詳細解說螢火蟲的品種與習性","option_c":"介紹內灣的知名賞螢景點","option_d":"推薦內灣觀星的景點","answer":"C","analysis":"","hint":""},{"no":"68","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L6","source":"康軒A卷","question":"「儘管文類的變化有如潮起潮落……古典的散文，不只是一種書寫……它用文體寄託情意，也在情意中表現議論。」根據這段文字，下列敘述何者正確？","option_a":"古典戲劇中艱澀的對白使人難以親近","option_b":"古典散文具有情意與議論交融的特質","option_c":"古典文類雖已走向衰敗，作者仍持續推廣","option_d":"傳統與創新難以兼容並蓄","answer":"B","analysis":"","hint":""},{"no":"69","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L6","source":"康軒A卷","question":"「假如晏蜓是藍寶石，那麼比這更迷人的，習性如謎的春蜓，恐怕是橙色的琥珀了。春蜓局限於茂密山區的溪域棲息，牠的出現意味著溪流，以及溪流兩岸的林木尚保存良好。」根據這段文字，下列敘述何者正確？","option_a":"晏蜓的顏色比春蜓更迷人","option_b":"春蜓比晏蜓更能適應環境變化","option_c":"作者以不同的寶石凸顯蜻蜓受重視的程度","option_d":"春蜓的行蹤反映出自然環境的狀況","answer":"D","analysis":"","hint":""},{"no":"70","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L6","source":"康軒A卷","question":"「最原始的螢火蟲在白天飛且不發光……某些螢火蟲只有雌性會發光，牠們沒有翅膀，所以每晚爬上岸邊，持續幾個小時發光，吸引正飛舞但不會發光的雄性。」根據這段文字，下列敘述何者最恰當？","option_a":"螢火蟲不只具有飛行能力，且皆能發光","option_b":"自古以來，雄性螢火蟲都是透過發光來吸引雌性","option_c":"不同種類的螢火蟲在身體構造上可能不同","option_d":"某些不會發光的雄性螢火蟲，會散發香味吸引雌性","answer":"C","analysis":"","hint":""},{"no":"71","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L6","source":"康軒A卷","question":"「盈盈一水隔，寂寂二更初。」詩中的「二更」是指下列何時？","option_a":"子時","option_b":"丑時","option_c":"戌時","option_d":"亥時","answer":"D","analysis":"","hint":""},{"no":"72","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L6","source":"康軒A卷","question":"「不自慚微照，秋宵款款飛。」（李嶠〈螢〉）這兩句詩的寓意，與下列何者最相近？","option_a":"為成全大我，可犧牲小我","option_b":"適可而止，以免自暴其短","option_c":"奉獻不在大小，而在展現生命價值","option_d":"付出愈多，得到的回報愈大","answer":"C","analysis":"","hint":""},{"no":"73","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L6","source":"康軒A卷","question":"「童年是整個人生的基石，童年的經歷以及童年時所作的夢想，會隨著成長而逐漸變成了鄉愁，而這也幾乎決定了往後的人生……」這段文字的含義，與下列何者最相近？","option_a":"人在成長後總會眷念故鄉","option_b":"童年的夢想需要長時間才能達成","option_c":"成年後的事業成就奠基於童年的努力","option_d":"童年的經歷對人生會產生重大影響","answer":"D","analysis":"","hint":""},{"no":"74","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L6","source":"康軒A卷","question":"「人情聽鶯啼則喜，聞蛙鳴則厭；見花則思培之，遇草則欲去之，但是以形氣用事。若以性天視之，何者非自鳴其天機？非自暢其生意也？」（菜根譚）這段文字的主旨為何？","option_a":"世間萬物都有值得欣賞之處","option_b":"人類總是妄想主宰世間萬物","option_c":"每個時代的審美眼光不盡相同","option_d":"再微小的生命都有活下去的權利","answer":"A","analysis":"","hint":""},{"no":"75","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"L6","source":"康軒A卷","question":"「真正的園丁來到你的花園，總讓你覺得你的花園簡直是一場悲劇……彎腰拔起一根根雜草，如在自己花園般的反射動作，忘了那並非他自家的庭院。」根據這段文字，關於「真正的園丁」，下列敘述何者正確？","option_a":"能將書本所學的知識運用於現實生活","option_b":"對於花園裡的各種昆蟲習性瞭若指掌","option_c":"能勤快的指導他人照顧花園的技巧","option_d":"無法接受花園裡長出雜亂的雜草","answer":"D","analysis":"","hint":""},{"no":"76","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"全","source":"康軒A卷","question":"下列選項「　」中的形近字，何組讀音前後相同？","option_a":"挑東「揀」西／納「諫」如流","option_b":"大片「空」地／情緒失「控」","option_c":"「納」稅義務／剛毅木「訥」","option_d":"春風「拂」面／揚湯止「沸」","answer":"B","analysis":"","hint":""},{"no":"77","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"全","source":"康軒A卷","question":"下列「　」中的注音寫成國字後，何組字形前後相同？","option_a":"「ㄑㄧㄥ」囊相授／布衣「ㄑㄧㄥ」相","option_b":"耳「ㄖㄨˊ」目染／相「ㄖㄨˊ」以沫","option_c":"「ㄌㄨˋ」音機／奔波勞「ㄌㄨˋ」","option_d":"信「ㄊㄨㄛ」財產／「ㄊㄨㄛ」泥帶水","answer":"B","analysis":"","hint":""},{"no":"78","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"全","source":"康軒A卷","question":"下列選項「　」中的字，何組意思前後相同？","option_a":"情不自「已」／死而後「已」","option_b":"情「鬱」於中／內心憂「鬱」","option_c":"疲「累」不堪／連「累」家人","option_d":"「寂寥」之感／「寥」若晨星","answer":"A","analysis":"","hint":""},{"no":"79","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"全","source":"康軒A卷","question":"下列選項中的「白」字，何者實指顏色？","option_a":"「白」開水","option_b":"「白」璧無瑕","option_c":"真相大「白」","option_d":"託他們直是「白」託","answer":"B","analysis":"","hint":""},{"no":"80","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"全","source":"康軒A卷","question":"下列成語，何組意思前後相近？","option_a":"念茲在茲／置之腦後","option_b":"躊躇不決／躊躇滿志","option_c":"六馬仰秣／繞梁三日","option_d":"正中下懷／耿耿於懷","answer":"C","analysis":"","hint":""},{"no":"81","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"全","source":"康軒A卷","question":"下列文句的語氣，何者說明正確？","option_a":"我買幾個橘子去，你就在此地不要走動：斥責","option_b":"大約大去之期不遠矣：假設","option_c":"這簡直是人間天籟，臺語的瑰寶：讚嘆","option_d":"他所珍惜的，大概就是流螢沾衣、慰我寂寥的會心之感：無奈","answer":"C","analysis":"","hint":""},{"no":"82","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"全","source":"康軒A卷","question":"副詞是用來區別或限制事物的動作、形態、性質的詞。下列文句「　」中的字詞，何者屬於副詞？","option_a":"他忙著「照看」行李","option_b":"後面是一塊小小的「空」地","option_c":"那「熟悉」的聲音也許又出現了","option_d":"入夜「輒」見此起彼落","answer":"D","analysis":"","hint":""},{"no":"83","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"全","source":"康軒A卷","question":"下列出自〈背影〉一文的文句，何者說明正確？","option_a":"我最不能忘記的是他的背影——實際描寫看到父親背影後的感慨","option_b":"這時我看見他的背影，我的淚很快地流下來了——眼見父親攀爬月臺的背影，感受到父親的慈愛","option_c":"等他的背影混入來來往往的人裡，再找不著了——心疼父親為了買橘子而上下月臺的艱辛","option_d":"在晶瑩的淚光中，又看見那肥胖的青布棉袍、黑布馬褂的背影——作者和父親相見後，想起過去送行的背影，觸景傷情","answer":"B","analysis":"","hint":""},{"no":"84","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"全","source":"康軒A卷","question":"〈背影〉一文中作者提及「我那時真是聰明過分」、「那時真是太聰明了」，旨在表達下列何種想法？","option_a":"想念父親對自己的慈愛","option_b":"暗笑父親的言行舉止迂腐","option_c":"感嘆年輕時不懂應對之道","option_d":"自責年輕時的無知與自以為是","answer":"D","analysis":"","hint":""},{"no":"85","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"全","source":"康軒A卷","question":"關於〈背影〉一文的寫作技巧，下列說明何者錯誤？","option_a":"全文首段以「我最不能忘記的是他的背影」點出主題，屬於「冒題法」","option_b":"「背影」象徵父愛，也是作者體悟父親之愛後的回憶","option_c":"文中的「紫毛大衣」、「朱紅的橘子」，均象徵父愛的溫暖","option_d":"以寫實筆法描寫父親為兒子買橘子的過程，是全文的核心","answer":"A","analysis":"","hint":""},{"no":"86","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"全","source":"康軒A卷","question":"「昨天晚上你也許還吃著燒仙草，今天你忽然聽到他改叫『冷豆花哦』。」這段文字藉由叫賣聲表達了下列何事？","option_a":"季節的遞嬗","option_b":"天氣乍暖還寒","option_c":"美好時光快速流逝","option_d":"小販兢兢業業","answer":"A","analysis":"","hint":""},{"no":"87","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"全","source":"康軒A卷","question":"關於〈聲音鐘〉一文的寫作技巧，下列說明何者正確？","option_a":"運用轉化手法描寫叫賣聲，提醒人們應當把握時間","option_b":"文中以豐富的對話呈現作者與攤販間的好交情","option_c":"以對比的手法，凸顯叫賣聲比時鐘更加準確","option_d":"文章首尾呼應，表達作者對小販叫賣聲的喜愛之情","answer":"D","analysis":"","hint":""},{"no":"88","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"全","source":"康軒A卷","question":"〈今夜看螢去〉一文中，作者引用許多詩句，下列說明何者正確？","option_a":"「簾疏巧入坐人衣」描寫人在簾後欣賞螢火蟲飛舞","option_b":"「時能點客衣」描寫讀書人以螢火作為照明","option_c":"「騰空類星隕」描寫螢火蟲紛紛墜落在地","option_d":"「拂木若花生」描寫螢火蟲拂弄著枝葉，就像樹上開出朵朵花兒","answer":"D","analysis":"","hint":""},{"no":"89","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"全","source":"康軒A卷","question":"〈今夜看螢去〉一文中，作者認為「看螢讓人覺得溫暖」的原因為何？","option_a":"螢火蟲的光亮在黑暗中給人寬慰之感","option_b":"山中氣溫較低，螢火蟲的溫度讓人溫暖","option_c":"閱讀與螢火蟲相關的詩句，與古人產生共鳴","option_d":"返鄉的途中，螢火蟲的亮度能取代路燈，照亮回家的路","answer":"A","analysis":"","hint":""},{"no":"90","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"全","source":"康軒A卷","question":"關於字體的說明，下列何者正確？","option_a":"甲骨文是刻在龜甲、獸骨上的文字，筆畫渾厚圓潤","option_b":"隸書由小篆演變而來，是秦國統一使用的文字","option_c":"楷書筆畫方正勻稱，是教育部公布的「標準字體」","option_d":"草書最著名的作品為東晉王羲之的蘭亭集序","answer":"C","analysis":"","hint":""},{"no":"91","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"全","source":"康軒A卷","question":"「學書者始由不工求工，繼由工求不工。不工者，工之極也。」（劉熙載）這段話旨在說明下列何者？","option_a":"寫書法的境界","option_b":"作文章的工夫","option_c":"字體的演變","option_d":"讀書的要領","answer":"A","analysis":"","hint":""},{"no":"92","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"全","source":"康軒A卷","question":"「沿著臺北的中山北路……一路走，走著走著，在春天你就會走回福州城……它們完全是同其濃淡共其深淺的啊！」這段文字在表達什麼意思？","option_a":"春天最適合在福州城裡散步","option_b":"臺北比福州城漂亮","option_c":"春天的臺北與福州城有相似景致","option_d":"臺北的春雨與樹比福州城多","answer":"C","analysis":"","hint":""},{"no":"93","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"全","source":"康軒A卷","question":"「對後豐港居民來說，鱟是食物，也是孩子的玩伴……曾經腳下踩的灘地充滿生機，現在是一片白色死寂，人與鱟都同時失去了海。」這段文字未提及下列何者？","option_a":"鱟適應環境變遷的方式","option_b":"填海造陸對棲地的破壞","option_c":"商港與遊憩區的開發影響居民生計","option_d":"鱟與後豐港居民生活密切","answer":"A","analysis":"","hint":""},{"no":"94","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"全","source":"康軒A卷","question":"「父親的名聲有時無助於兒子，卻反而會淹沒他：他們彼此站得太近，陰影扼殺了成長。」這段文字主要在說明下列何種道理？","option_a":"過度的父愛會寵壞孩子","option_b":"父親的名氣可能成為孩子的壓力","option_c":"孩子的名聲令父親感到驕傲","option_d":"父子之間必須保持適當距離，才能相處融洽","answer":"B","analysis":"","hint":""},{"no":"95","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"全","source":"康軒A卷","question":"「你是個冒牌醫生／動不動就為人打針／不管別人願不願意／真是霸道啊／你也是個冒牌歌星／天一黑就開始唱歌／不管別人喜不喜歡／真是無聊」這首詩描寫的對象為何？","option_a":"蟬","option_b":"烏鴉","option_c":"蜻蜓","option_d":"蚊子","answer":"D","analysis":"","hint":""},{"no":"96","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"全","source":"康軒A卷","question":"「我現在已是五個兒女的父親了……新近一位親戚嘲笑我說：『要剝層皮呢！』更有些悚然了。」（朱自清）作者親戚口中「要剝層皮呢」的含義為何？","option_a":"子女長大後對父母的回報","option_b":"養育子女過程中的付出","option_c":"應讓子女適性發展","option_d":"父母對子女的深切期許","answer":"B","analysis":"","hint":""},{"no":"97","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"全","source":"康軒A卷","question":"「臺灣早年農業社會……醬菜文化就是這個時空背景下的產物……醬菜本身較鹹的口味，更是辛苦勞動後或天氣炎熱時的最佳開胃菜。」這段文字沒有提及下列何者？","option_a":"醬菜文化的背景","option_b":"製作醬菜的方式","option_c":"醬菜的風味","option_d":"烹調醬菜的方式","answer":"D","analysis":"","hint":""},{"no":"98","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"全","source":"康軒A卷","question":"「人之生也，百歲之中，有疾病焉，故君子思其不可復者而先施焉。親戚既歿，雖欲孝，誰為孝？」這段文字的主旨為何？","option_a":"盡孝應及時，避免子欲養而親不待的無奈","option_b":"對於父母之命，無論如何都不應違背","option_c":"減少父母身體的病痛，是孝道的最高表現","option_d":"父母離世之後，仍應以最高禮儀祭祀","answer":"A","analysis":"","hint":""},{"no":"99","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"全","source":"康軒A卷","question":"「的歷流光小，飄飄弱翅輕。恐無人識，獨自暗中明。」（虞世南〈詠螢〉）關於這首詩的分析，下列說明何者正確？","option_a":"首句描寫許多螢火蟲聚在一起的盛況","option_b":"次句說明在風雨中螢火蟲不易生存","option_c":"第三句說明螢火蟲怕無人知道自己的存在","option_d":"末句透露不易在白天發現螢火蟲","answer":"C","analysis":"","hint":""},{"no":"100","subject":"國文","grade":"七年級","exam":"第二次段考","unit":"全","source":"康軒A卷","question":"大衛與伊凡約好參加賞螢行程，活動導覽將於晚上七點半開始，晚上九點結束。從捷運站走到賞螢集合地點需要半小時，若不想錯過導覽，兩人最晚應約定在哪一個時辰於捷運站碰面？","option_a":"子時","option_b":"丑時","option_c":"酉時","option_d":"亥時","answer":"C","analysis":"","hint":""},{"no":"1","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"教學式講義","question":"Which is your bag, the red ___ or the blue ___?","option_a":"ones; ones","option_b":"one; one","option_c":"one; ones","option_d":"ones; one","answer":"B","analysis":"bag 為單數，兩處皆用 one 代替。","hint":"單數 bag→one"},{"no":"2","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"教學式講義","question":"A: ___ are two sandwiches?  B: They are sixty dollars.","option_a":"How much","option_b":"How old","option_c":"How many","option_d":"How tall","answer":"A","analysis":"詢問價錢用 How much。","hint":"問價錢"},{"no":"3","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"教學式講義","question":"There are five dolls in the box: four big ___ and a small ___.","option_a":"one; one","option_b":"one; ones","option_c":"ones; one","option_d":"ones; ones","answer":"C","analysis":"四個用 ones（複數），一個用 one。","hint":"多→ones,一→one"},{"no":"4","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"教學式講義","question":"A: Which ice cream is your favorite, milk, chocolate, ___ banana?  B: Chocolate ice cream is my favorite.","option_a":"then","option_b":"and","option_c":"but","option_d":"or","answer":"D","analysis":"選擇句型最後選項用 or 連接。","hint":"選擇用 or"},{"no":"5","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"教學式講義","question":"A: How much ___ the black tea?  B: Thirty-five dollars.","option_a":"does","option_b":"do","option_c":"is","option_d":"are","answer":"C","analysis":"tea 不可數，be 動詞用 is。","hint":"不可數+is"},{"no":"6","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"教學式講義","question":"A: Can I have ___ hot tea?  B: Sorry. We don't have ___ hot tea.","option_a":"some; many","option_b":"many; any","option_c":"some; any","option_d":"any; many","answer":"C","analysis":"肯定用 some，否定用 any。","hint":"肯定some,否定any"},{"no":"7","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"教學式講義","question":"A: Which boy ___ long hair, Jimmy or Tony?  B: Tony.","option_a":"has","option_b":"is","option_c":"is having","option_d":"does he have","answer":"A","analysis":"主詞為第三人稱單數，動詞用 has。","hint":"第三單數+has"},{"no":"8","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"教學式講義","question":"A: Which ___ they like, baseball or basketball?  B: They like baseball.","option_a":"are","option_b":"can","option_c":"does","option_d":"do","answer":"D","analysis":"主詞 they 搭配助動詞 do。","hint":"they+do"},{"no":"9","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"教學式講義","question":"A: ___  B: Yes, I want some coffee, please.","option_a":"May I help you?","option_b":"For here or to go?","option_c":"How much is the coffee?","option_d":"Which do you like, coffee or tea?","answer":"A","analysis":"店員招呼客人問：May I help you?","hint":"服務問候語"},{"no":"10","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"教學式講義","question":"A: May I have some juice, please?  B: ___","option_a":"Yes, please.","option_b":"It is my treat.","option_c":"Thank you very much.","option_d":"Of course. Here you go.","answer":"D","analysis":"答應提供物品說 Of course. Here you go.","hint":"答應給予"},{"no":"11","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"教學式講義","question":"A: I want a hamburger and some soup.  B: ___  A: For here, please.","option_a":"And you, sir?","option_b":"Here you are, sir.","option_c":"For here or to go?","option_d":"What do you want for lunch?","answer":"C","analysis":"點餐後問內用或外帶。","hint":"內用或外帶"},{"no":"12","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"教學式講義","question":"A: Let's go have some milk tea. My treat.  B: ___","option_a":"That's a great one\\!","option_b":"That's sweet of you.","option_c":"I like the chocolate one.","option_d":"Which do you like, green tea or black tea?","answer":"B","analysis":"對方請客，回應 That's sweet of you。","hint":"你真好"},{"no":"13","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"教學式講義","question":"Nancy and her husband are taking a walk on the ___ near the park.","option_a":"street","option_b":"sky","option_c":"part","option_d":"shop","answer":"A","analysis":"公園附近散步應在街道（street）。","hint":"散步在街道"},{"no":"14","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"教學式講義","question":"I don't like the black umbrella. The color is too ___.","option_a":"hot","option_b":"sweet","option_c":"bright","option_d":"dark","answer":"D","analysis":"黑色屬於太暗（dark）的顏色。","hint":"黑色=dark"},{"no":"15","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"教學式講義","question":"A: Let's go to the museum. There are new paintings this week.  B: Sure. I like ___ very much.","option_a":"coffee","option_b":"baseball","option_c":"art","option_d":"music","answer":"C","analysis":"美術館看畫，喜歡藝術（art）。","hint":"美術館=藝術"},{"no":"16","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"教學式講義","question":"The man is ___ the new house to us.","option_a":"making","option_b":"treating","option_c":"painting","option_d":"showing","answer":"D","analysis":"帶看新房用『展示』（show）。","hint":"帶看=show"},{"no":"17","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"教學式講義","question":"A: I am hungry.  B: Let's go eat at Yummy Yummy. They have great ___.","option_a":"tea","option_b":"coffee","option_c":"drinks","option_d":"hamburgers","answer":"D","analysis":"飢餓時想吃漢堡（hamburgers）止飢。","hint":"餓→吃漢堡"},{"no":"18","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"教學式講義","question":"A: Tom, clean the living room.  B: Can I do it ___? I'm doing my homework.","option_a":"then","option_b":"later","option_c":"before","option_d":"now","answer":"B","analysis":"正在做作業，故請求晚點（later）做。","hint":"之後→later"},{"no":"19","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"教學式講義","question":"A: What are you drinking?  B: ___ It's great. Do you want some?","option_a":"Juice.","option_b":"Cookies.","option_c":"A cake.","option_d":"A sandwich.","answer":"A","analysis":"詢問喝什麼，回答應為飲料（juice）。","hint":"drink=飲料"},{"no":"20","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"A卷L3","question":"There __ some black tea in the cup.","option_a":"is","option_b":"are","option_c":"has","option_d":"have","answer":"A","analysis":"black tea 不可數，be 動詞用 is。","hint":"不可數+is"},{"no":"21","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"A卷L3","question":"A: Do you like the red flowers or the white flowers? B: I like the red __ .","option_a":"X","option_b":"one","option_c":"ones","option_d":"flower","answer":"C","analysis":"red flowers 複數，代名詞用 ones。","hint":"複數→ones"},{"no":"22","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"A卷L3","question":"There are two paintings on the wall. One is from me, and __ is from my brother.","option_a":"some","option_b":"other","option_c":"the one","option_d":"the other","answer":"D","analysis":"兩者中另一個用 the other。","hint":"二選一剩一"},{"no":"23","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"A卷L3","question":"A: Can I have some __ , please? B: Of course. Here you go.","option_a":"flower","option_b":"cookie","option_c":"hot dog","option_d":"egg soup","answer":"D","analysis":"have some 後接食物，egg soup（蛋花湯）。","hint":"have some食物"},{"no":"24","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"A卷L3","question":"A: __ are the brushes? B: They're NT$500.","option_a":"How long","option_b":"How many","option_c":"How much","option_d":"Which ones","answer":"C","analysis":"詢問價錢用 How much。","hint":"問價錢"},{"no":"25","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"A卷L3","question":"A: __ color do you like, green or yellow? B: I like yellow.","option_a":"Who","option_b":"Which","option_c":"How much","option_d":"How many","answer":"B","analysis":"二選一用 Which。","hint":"二擇一"},{"no":"26","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"A卷L3","question":"A: __ do you usually have for breakfast? B: A hamburger and some orange juice.","option_a":"What","option_b":"When","option_c":"Which","option_d":"Where","answer":"A","analysis":"詢問早餐內容用 What。","hint":"問內容"},{"no":"27","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"A卷L3","question":"A: How much __ the purple kite? B: Ninety __.","option_a":"are; dollar","option_b":"is; dollar","option_c":"is; dollars","option_d":"are; dollars","answer":"C","analysis":"kite 單數用 is，dollars 須複數。","hint":"is+dollars"},{"no":"28","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"A卷L3","question":"A: Which clerk are you talking about? B: __ next to the door.","option_a":"One","option_b":"The one","option_c":"The ones","option_d":"A clerk","answer":"B","analysis":"指特定一位店員用 The one。","hint":"特定一個"},{"no":"29","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"A卷L3","question":"A: Which sport does Lily play, baseball __ basketball? B: She plays baseball.","option_a":"or","option_b":"and","option_c":"but","option_d":"then","answer":"A","analysis":"二選一用 or 連接。","hint":"選擇用 or"},{"no":"30","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"A卷L3","question":"A: What are you reading? B: It's a book __ my favorite writer, Jorge Lucas.","option_a":"in","option_b":"to","option_c":"by","option_d":"at","answer":"C","analysis":"表作者所寫用 by（由…）。","hint":"作者用 by"},{"no":"31","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"A卷L3","question":"A: Which girl __ at the library? B: Mia.","option_a":"work","option_b":"works","option_c":"does she work","option_d":"is she working","answer":"B","analysis":"主詞 girl 第三單數，動詞用 works。","hint":"三單+works"},{"no":"32","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"A卷L3","question":"There are some cookies on the table, but you can only have __ .","option_a":"one","option_b":"ones","option_c":"the one","option_d":"the ones","answer":"A","analysis":"不特定其中一個用 one。","hint":"不特定 one"},{"no":"33","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"A卷L3","question":"A: __ B: It's NT$50.","option_a":"Is there a hot dog?","option_b":"How is the hot dog?","option_c":"How much is the hot dog?","option_d":"Which do you like, the hot dog or the hamburger?","answer":"C","analysis":"回答以價錢，故問 How much。","hint":"問價錢"},{"no":"34","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"A卷L3","question":"A: You don't like movies, right? B: ____ I go to the movies every week.","option_a":"Of course I do.","option_b":"Sure, here you go.","option_c":"Those are great ones.","option_d":"I don't really like them.","answer":"A","analysis":"反駁否定問句，用 Of course I do。","hint":"反駁回答"},{"no":"35","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"A卷L3","question":"A: Let's go to the drink shop later. My treat. B: Thanks! ____","option_a":"Here you are.","option_b":"It's a work of art.","option_c":"That's sweet of you.","option_d":"How much are the drinks?","answer":"C","analysis":"對方請客，回應 That's sweet of you。","hint":"你真好"},{"no":"36","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"A卷L3","question":"A: Hello, may I help you? B: Yes. Can I have two sandwiches, please? A: Sure. ____","option_a":"For here or to go?","option_b":"Do you like them?","option_c":"How much are they?","option_d":"What can I help you with?","answer":"A","analysis":"點餐後問內用或外帶。","hint":"內用外帶"},{"no":"37","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"A卷L3","question":"Kevin wants some __with his food.","option_a":"milk","option_b":"soup","option_c":"juice","option_d":"coffee","answer":"C","analysis":"配餐飲料用 juice 搭配。","hint":"配餐飲料"},{"no":"38","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"A卷L3","question":"A: Which do you want, hot chocolate __ hot tea? B: Thank you, but I don't drink chocolate __ tea.","option_a":"and; or","option_b":"or; or","option_c":"or; with","option_d":"and; and","answer":"B","analysis":"二擇一及否定都用 or 連接。","hint":"或者用 or"},{"no":"39","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"A卷L3","question":"It's really late. There aren't many people on the __ now.","option_a":"part","option_b":"shop","option_c":"street","option_d":"painting","answer":"C","analysis":"夜深街上人少，故 street。","hint":"街道=street"},{"no":"40","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"A卷L3","question":"Rima is on a diet(節食). She doesn't eat rice; she only __ soup for dinner.","option_a":"eats","option_b":"treats","option_c":"takes","option_d":"shows","answer":"A","analysis":"主詞 she 第三單數，動詞用 eats。","hint":"三單+eats"},{"no":"41","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L3","source":"A卷L3","question":"10,000 NT dollars __ a lot of money to a student.","option_a":"is","option_b":"has","option_c":"are","option_d":"have","answer":"A","analysis":"金額視為單一整體，動詞用 is。","hint":"金額+is"},{"no":"42","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"A卷L4","question":"There __ two bags of salt in the kitchen.","option_a":"is","option_b":"are","option_c":"has","option_d":"have","answer":"B","analysis":"兩袋鹽是複數，用 there are。","hint":"複數+are"},{"no":"43","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"A卷L4","question":"A: __ boxes of pizza __ there on the table? B: Only one.","option_a":"How much; is","option_b":"How much; are","option_c":"How many; is","option_d":"How many; are","answer":"D","analysis":"可數複數用 How many 與 are。","hint":"可數+are"},{"no":"44","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"A卷L4","question":"A: __ bottles of juice do we have there? B: We don't have __.","option_a":"How much; any","option_b":"How many; any","option_c":"How much; some","option_d":"How many; some","answer":"B","analysis":"可數複數搭否定句用 any。","hint":"否定 any"},{"no":"45","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"A卷L4","question":"A: How much coffee __ they drink every day? B: Not much.","option_a":"is","option_b":"do","option_c":"are","option_d":"does","answer":"B","analysis":"主詞 they 配助動詞 do。","hint":"they+do"},{"no":"46","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"A卷L4","question":"A: __ popcorn do we need? B: We need three tubs.","option_a":"Which","option_b":"How big","option_c":"How much","option_d":"How many","answer":"C","analysis":"popcorn 不可數，用 How much。","hint":"不可數"},{"no":"47","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"A卷L4","question":"A: __ do we make orange ice cream? B: We can follow this recipe(食譜).","option_a":"How","option_b":"What","option_c":"When","option_d":"Where","answer":"A","analysis":"問做法用 How。","hint":"問方法"},{"no":"48","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"A卷L4","question":"A: What is there in the bag? B: There are two __ of __.","option_a":"box; cookie","option_b":"box; cookies","option_c":"boxes; cookie","option_d":"boxes; cookies","answer":"D","analysis":"兩盒用 boxes，餅乾用複數 cookies。","hint":"複數+複數"},{"no":"49","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"A卷L4","question":"I love basketball, __ I play it every day.","option_a":"so","option_b":"but","option_c":"still","option_d":"because","answer":"A","analysis":"前因後果關係，用 so 連接。","hint":"所以=so"},{"no":"50","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"A卷L4","question":"A: __ don't we go to the movies this afternoon? B: Sorry, I can't go with you.","option_a":"Why","option_b":"How","option_c":"When","option_d":"Where","answer":"A","analysis":"提議句型用 Why don't we。","hint":"為什麼不"},{"no":"51","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"A卷L4","question":"__ Ivy is free on weekends, __ she helps her dad in the flower shop on Sundays.","option_a":"So; X","option_b":"Because; X","option_c":"Because; so","option_d":"So; because","answer":"B","analysis":"一句中已有 Because，後不可加 so。","hint":"只用其一"},{"no":"52","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"A卷L4","question":"A: Hey, Mike. I have __ __ for you. B: Wow! It's a sports watch. Thank you!","option_a":"anything; special","option_b":"special; anything","option_c":"special; something","option_d":"something; special","answer":"D","analysis":"something 後接形容詞 special。","hint":"something+adj"},{"no":"53","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"A卷L4","question":"A: Why do you need so much bread and turkey? B: __ __","option_a":"Because the party is ready.","option_b":"I don't like turkey sandwiches.","option_c":"There is enough food for the party.","option_d":"I'm making turkey sandwiches for the party.","answer":"D","analysis":"解釋需要食材，是要做三明治。","hint":"答原因"},{"no":"54","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"A卷L4","question":"A: How much pizza do they need for the party? B: ____","option_a":"It's NT$290 a box.","option_b":"I can get a box for them.","option_c":"Maybe two or three boxes.","option_d":"There isn't any pizza in the box.","answer":"C","analysis":"回答需多少 pizza，答數量。","hint":"答數量"},{"no":"55","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"A卷L4","question":"A: I'm sorry about the bowl, Mr. Bobs. B: ____ It's an old bowl, and I have lots of new bowls.","option_a":"Back off!","option_b":"It's all right.","option_c":"I only have a little.","option_d":"What else do we need?","answer":"B","analysis":"回應道歉，說沒關係。","hint":"沒關係"},{"no":"56","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"A卷L4","question":"Three bowls of fruit salad __ 240 NT dollars.","option_a":"is","option_b":"are","option_c":"has","option_d":"have","answer":"B","analysis":"three bowls 複數，動詞用 are。","hint":"複數+are"},{"no":"57","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"L4","source":"A卷L4","question":"A: Why not __ a cup of coffee at the new coffee shop? My treat! B: Thanks. That's sweet of you.","option_a":"has","option_b":"have","option_c":"to have","option_d":"having","answer":"B","analysis":"Why not 後接原形動詞 have。","hint":"Why not+原形"},{"no":"58","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"全","source":"A卷L3L4","question":"The two bags of __ are for you guys.","option_a":"orange","option_b":"oranges","option_c":"an orange","option_d":"one orange","answer":"B","analysis":"bags of 後接複數名詞 oranges。","hint":"bags of+複數"},{"no":"59","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"全","source":"A卷L3L4","question":"Lisa drinks three __ water every day.","option_a":"bottle","option_b":"bottles","option_c":"bottle of","option_d":"bottles of","answer":"D","analysis":"三瓶水用 bottles of water。","hint":"bottles of"},{"no":"60","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"全","source":"A卷L3L4","question":"A: __ are these plates? B: They're three hundred dollars.","option_a":"How big","option_b":"How long","option_c":"How much","option_d":"How many","answer":"C","analysis":"詢問價錢用 How much。","hint":"問價錢"},{"no":"61","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"全","source":"A卷L3L4","question":"A: __ do you always listen to Kelly's songs at work? B: Her songs are bright and beautiful.","option_a":"Who","option_b":"Why","option_c":"How","option_d":"When","answer":"B","analysis":"回答為原因，故問 Why。","hint":"問原因"},{"no":"62","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"全","source":"A卷L3L4","question":"A: Do you want some __? B: Yes, please.","option_a":"bread","option_b":"cup","option_c":"hot dog","option_d":"cookie","answer":"A","analysis":"bread 不可數，搭配 some。","hint":"不可數"},{"no":"63","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"全","source":"A卷L3L4","question":"A: These flowers are beautiful. B: They are. I like the blue __; they are special.","option_a":"one","option_b":"ones","option_c":"each","option_d":"others","answer":"B","analysis":"flowers 複數，代名詞用 ones。","hint":"複數→ones"},{"no":"64","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"全","source":"A卷L3L4","question":"A: __ milk shake do you want? B: I want five __.","option_a":"How much; glass","option_b":"How many; glass","option_c":"How much; glasses","option_d":"How many; glasses","answer":"C","analysis":"milk shake 不可數，glasses 複數。","hint":"不可數+量詞"},{"no":"65","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"全","source":"A卷L3L4","question":"A: Is this painting __ Frida Kahlo? B: No, it's not.","option_a":"by","option_b":"of","option_c":"at","option_d":"to","answer":"A","analysis":"表畫作出自某人之手，用 by。","hint":"作者用 by"},{"no":"66","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"全","source":"A卷L3L4","question":"A: Which coffee shop do you usually go to? B: __ on Parker Street.","option_a":"The one","option_b":"The other","option_c":"Anything","option_d":"Something","answer":"A","analysis":"指特定一間咖啡店用 The one。","hint":"特定一間"},{"no":"67","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"全","source":"A卷L3L4","question":"__ Liam is nice to everyone, __ all his classmates like him.","option_a":"So; X","option_b":"So; because","option_c":"Because; so","option_d":"Because; X","answer":"D","analysis":"已用 Because，後不可再加 so。","hint":"只用其一"},{"no":"68","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"全","source":"A卷L3L4","question":"A: __ bags of flour does Rachel need? B: She needs ten.","option_a":"What","option_b":"Which","option_c":"How much","option_d":"How many","answer":"D","analysis":"bags 為可數複數，用 How many。","hint":"可數+many"},{"no":"69","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"全","source":"A卷L3L4","question":"A: __ do you want, milk tea or black tea? B: Black tea, please.","option_a":"How","option_b":"When","option_c":"Which","option_d":"How much","answer":"C","analysis":"二擇一用 Which。","hint":"二擇一"},{"no":"70","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"全","source":"A卷L3L4","question":"A: Is there some pizza in the box? B: No, there isn't __.","option_a":"any","option_b":"one","option_c":"some","option_d":"a little","answer":"A","analysis":"否定句用 any。","hint":"否定 any"},{"no":"71","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"全","source":"A卷L3L4","question":"A: It's hot today. ____ B: Sorry. I don't eat ice cream. It's too sweet for me.","option_a":"Do we have ice cream at home?","option_b":"Why are you making ice cream?","option_c":"How much ice cream do we have?","option_d":"Why don't we get some ice cream?","answer":"D","analysis":"提議買冰淇淋用 Why don't we。","hint":"提議句型"},{"no":"72","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"全","source":"A卷L3L4","question":"A: ___ B: There are five.","option_a":"How much is the sandwich?","option_b":"Which sandwich do you want?","option_c":"How many sandwiches are there?","option_d":"How many sandwiches do you need?","answer":"C","analysis":"回答存在的數量，問 How many。","hint":"問存在數"},{"no":"73","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"全","source":"A卷L3L4","question":"A: Why do you like Amanda? B: ___","option_a":"She is at the door.","option_b":"She is a sweet girl.","option_c":"She can't go home now.","option_d":"She likes something else.","answer":"B","analysis":"回答喜歡某人的原因。","hint":"答原因"},{"no":"74","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"全","source":"A卷L3L4","question":"A: Hello! ___ B: Hi, can I get a cup of hot coffee, please?","option_a":"For here or to go?","option_b":"How much do you want?","option_c":"Can you help me, please?","option_d":"What can I get for you today?","answer":"D","analysis":"服務員詢問點餐：What can I get?","hint":"服務問候"},{"no":"75","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"全","source":"A卷L3L4","question":"A: How much __ two bowls of fruit salad? B: Two hundred NT dollars.","option_a":"is","option_b":"do","option_c":"are","option_d":"does","answer":"C","analysis":"two bowls 為複數，動詞用 are。","hint":"複數+are"},{"no":"76","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"全","source":"A卷L3L4","question":"Some animals come out at night and __ food.","option_a":"go on","option_b":"hunt for","option_c":"fall on","option_d":"make up for","answer":"B","analysis":"動物覓食的固定用法 hunt for。","hint":"覓食=hunt"},{"no":"77","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"全","source":"A卷L3L4","question":"Meg is happy __ the good news.(消息)","option_a":"of","option_b":"above","option_c":"back off","option_d":"because of","answer":"D","analysis":"因好消息而高興，用 because of+名詞。","hint":"because of+名"},{"no":"78","subject":"英文","grade":"七年級","exam":"第二次段考","unit":"全","source":"A卷L3L4","question":"A: I am a little hungry. B: Let's get some __ then.","option_a":"parts","option_b":"shops","option_c":"plates","option_d":"snacks","answer":"D","analysis":"肚子有點餓，吃點零食 snacks。","hint":"餓→零食"}];
+
+// ── Storage keys ──────────────────────────
+const KEY_WRONG    = 'quizWrong';
+const KEY_ANSWERED = 'quizAnswered';
+const KEY_EXTRA    = 'quizExtra';   // 上傳的額外題目（非內建）
+
+// ── Helpers ───────────────────────────────
+const loadWrong = () => {
+  try {
+    const d = localStorage.getItem(KEY_WRONG) || localStorage.getItem('wrongBook') || '{}';
+    const result = JSON.parse(d);
+    // If data was stored with old key, migrate it
+    if (!localStorage.getItem(KEY_WRONG) && localStorage.getItem('wrongBook')) {
+      localStorage.setItem(KEY_WRONG, d);
+      localStorage.removeItem('wrongBook');
+    }
+    return result;
+  } catch { return {}; }
+};
+const loadAnswered = () => {
+  try {
+    const d = localStorage.getItem(KEY_ANSWERED) || localStorage.getItem('answeredLog') || '{}';
+    const result = JSON.parse(d);
+    // If data was stored with old key, migrate it
+    if (!localStorage.getItem(KEY_ANSWERED) && localStorage.getItem('answeredLog')) {
+      localStorage.setItem(KEY_ANSWERED, d);
+      localStorage.removeItem('answeredLog');
+    }
+    return result;
+  } catch { return {}; }
+};
+const loadExtra    = () => { try { return JSON.parse(localStorage.getItem(KEY_EXTRA)    || '[]');  } catch { return [];  } };
+const saveWrong    = d => localStorage.setItem(KEY_WRONG,    JSON.stringify(d));
+const saveAnswered = d => localStorage.setItem(KEY_ANSWERED, JSON.stringify(d));
+const saveExtra    = d => localStorage.setItem(KEY_EXTRA,    JSON.stringify(d));
+
+function compId(q) { return q.subject+'_'+q.grade+'_'+q.exam+'_'+q.unit+'_'+q.no; }
+
+// ── State ─────────────────────────────────
+let allQ = [];
+let sessionQ = [], curIdx = 0, isAnswered = false;
+let quizMode = 'all', uploadMode = 'merge';
+let selectedUnits = new Set(['all']);
+let timerRef = null, elapsed = 0;
+let sStats = {correct:0, wrong:0, skip:0};
+
+// ── Init ──────────────────────────────────
+function init() {
+  // BUILTIN_DB is always the base; extras from upload stored separately
+  const extra = loadExtra();
+  const builtinIds = new Set(BUILTIN_DB.map(q => compId(q)));
+  const validExtra = extra.filter(q => !builtinIds.has(compId(q)));
+  allQ = [...BUILTIN_DB, ...validExtra];
+  populateFilters();
+  updateBadge();
+  updateSetupStats();
+}
+
+function updateSetupStats() {
+  document.getElementById('stat-total').textContent       = allQ.length;
+  document.getElementById('stat-answered').textContent    = Object.keys(loadAnswered()).length;
+  document.getElementById('stat-wrong-total').textContent = Object.keys(loadWrong()).length;
+}
+
+// ── Filters ───────────────────────────────
+function populateFilters() {
+  const subjects = [...new Set(allQ.map(q=>q.subject))].filter(Boolean).sort();
+  const grades   = [...new Set(allQ.map(q=>q.grade))].filter(Boolean).sort();
+  const exams    = [...new Set(allQ.map(q=>q.exam))].filter(Boolean).sort();
+  fillSel('sel-subject', subjects);
+  fillSel('sel-grade',   grades);
+  fillSel('sel-exam',    exams);
+  onFilterChange();
+}
+function fillSel(id, values) {
+  const sel = document.getElementById(id);
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">全部</option>' + values.map(v=>`<option value="${v}">${v}</option>`).join('');
+  if (values.includes(cur)) sel.value = cur;
+}
+function onFilterChange() {
+  const pool = getPool({ignoreUnits:true});
+  const units = [...new Set(pool.map(q=>q.unit))].filter(Boolean).sort();
+  const grid = document.getElementById('unit-grid');
+  grid.innerHTML = `<span class="unit-chip all-chip${selectedUnits.has('all')?' active':''}" onclick="toggleUnit('all',this)">全部單元</span>`;
+  units.forEach(u => {
+    const cnt = pool.filter(q=>q.unit===u).length;
+    const active = !selectedUnits.has('all') && selectedUnits.has(u);
+    grid.innerHTML += `<span class="unit-chip${active?' active':''}" onclick="toggleUnit('${u}',this)">${u} <span style="opacity:0.6;font-size:0.7rem">${cnt}</span></span>`;
+  });
+  updateAvail();
+}
+function toggleUnit(u, el) {
+  if (u==='all') {
+    selectedUnits = new Set(['all']);
+    document.querySelectorAll('.unit-chip').forEach(c=>c.classList.remove('active'));
+    el.classList.add('active');
+  } else {
+    selectedUnits.delete('all');
+    document.querySelector('.all-chip').classList.remove('active');
+    if (selectedUnits.has(u)) {
+      selectedUnits.delete(u);
+      el.classList.remove('active');
+      if (selectedUnits.size===0) { selectedUnits.add('all'); document.querySelector('.all-chip').classList.add('active'); }
+    } else {
+      selectedUnits.add(u);
+      el.classList.add('active');
+    }
+  }
+  updateAvail();
+}
+function getPool({ignoreUnits=false}={}) {
+  const subj  = document.getElementById('sel-subject').value;
+  const grade = document.getElementById('sel-grade').value;
+  const exam  = document.getElementById('sel-exam').value;
+  const wrong = loadWrong(), answered = loadAnswered();
+  let pool = allQ;
+  if (subj)  pool = pool.filter(q=>q.subject===subj);
+  if (grade) pool = pool.filter(q=>q.grade===grade);
+  if (exam)  pool = pool.filter(q=>q.exam===exam);
+  if (!ignoreUnits && !selectedUnits.has('all'))
+    pool = pool.filter(q=>selectedUnits.has(q.unit));
+  if (quizMode==='wrong') pool = pool.filter(q=>wrong[compId(q)]);
+  if (quizMode==='new')   pool = pool.filter(q=>!answered[compId(q)]);
+  return pool;
+}
+function updateAvail() {
+  const pool = getPool();
+  const wrong = loadWrong(), answered = loadAnswered();
+  const n = parseInt(document.getElementById('q-slider').value);
+  const actual = Math.min(n, pool.length);
+  document.getElementById('slider-hint').innerHTML = `篩選後共 <strong>${pool.length}</strong> 題，出 <strong>${actual}</strong> 題`;
+  document.getElementById('start-btn').disabled = pool.length===0;
+  document.getElementById('pb-new').textContent   = pool.filter(q=>!answered[compId(q)]).length;
+  document.getElementById('pb-wrong').textContent = pool.filter(q=>wrong[compId(q)]).length;
+  document.getElementById('pb-done').textContent  = pool.filter(q=>answered[compId(q)]&&!wrong[compId(q)]).length;
+}
+function onSlider(el) {
+  document.getElementById('slider-val').textContent = el.value;
+  updateAvail();
+}
+function setMode(m, btn) {
+  quizMode = m;
+  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  updateAvail();
+}
+
+// ── Quiz ──────────────────────────────────
+function shuffle(arr) {
+  const a=[...arr];
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+function prioritySort(pool) {
+  const wrong=loadWrong(), answered=loadAnswered();
+  return [
+    ...shuffle(pool.filter(q=>!answered[compId(q)])),
+    ...shuffle(pool.filter(q=>wrong[compId(q)]&&answered[compId(q)])),
+    ...shuffle(pool.filter(q=>answered[compId(q)]&&!wrong[compId(q)]))
+  ];
+}
+function startQuiz() {
+  const pool=getPool();
+  const n=Math.min(parseInt(document.getElementById('q-slider').value),pool.length);
+  if(!n){ alert('沒有符合條件的題目！'); return; }
+  sessionQ=prioritySort(pool).slice(0,n);
+  curIdx=0; sStats={correct:0,wrong:0,skip:0};
+  startTimer(); showScreen('quiz'); renderQ();
+}
+function startTimer() {
+  if(timerRef) clearInterval(timerRef);
+  elapsed=0;
+  timerRef=setInterval(()=>{
+    elapsed++;
+    const m=String(Math.floor(elapsed/60)).padStart(2,'0');
+    const s=String(elapsed%60).padStart(2,'0');
+    const el=document.getElementById('quiz-timer');
+    el.textContent=m+':'+s;
+    el.className='quiz-timer'+(elapsed>120?' warn':'');
+  },1000);
+}
+function renderQ() {
+  isAnswered=false;
+  const q=sessionQ[curIdx];
+  const total=sessionQ.length, num=curIdx+1;
+  const wrong=loadWrong(), answered=loadAnswered();
+  const id=compId(q);
+  document.getElementById('quiz-tag').textContent=q.subject+'・'+q.exam;
+  document.getElementById('quiz-counter').textContent='第 '+num+' / '+total+' 題';
+  document.getElementById('progress-fill').style.width=(num/total*100)+'%';
+  const done=sStats.correct+sStats.wrong;
+  document.getElementById('quiz-correct-rate').textContent=done>0?'答對率 '+Math.round(sStats.correct/done*100)+'%':'答對率 —';
+  let badge='';
+  if(!answered[id])      badge='<div class="q-priority new-q">🔵 新題目</div>';
+  else if(wrong[id])     badge='<div class="q-priority wrong-q">🔴 曾經答錯</div>';
+  else                   badge='<div class="q-priority done-q">✅ 複習題</div>';
+  document.getElementById('q-priority-badge').innerHTML=badge;
+  document.getElementById('quiz-question').textContent=q.question;
+  document.getElementById('options-list').innerHTML=['A','B','C','D'].map(l=>
+    `<button class="opt-btn" onclick="selectAns('${l}',this)"><span class="opt-label">${l}</span><span>${q['option_'+l.toLowerCase()]}</span></button>`
+  ).join('');
+  document.getElementById('feedback').className='feedback';
+  document.getElementById('btn-skip').style.display='';
+  document.getElementById('btn-skip').disabled=false;
+  document.getElementById('btn-next').style.display='none';
+}
+function selectAns(letter, btn) {
+  if(isAnswered) return;
+  isAnswered=true;
+  const q=sessionQ[curIdx];
+  const isOk=letter===q.answer;
+  document.querySelectorAll('.opt-btn').forEach(b=>b.disabled=true);
+  if(isOk) {
+    btn.classList.add('correct');
+    btn.querySelector('.opt-label').textContent='✓';
+    sStats.correct++;
+  } else {
+    btn.classList.add('wrong');
+    btn.querySelector('.opt-label').textContent='✗';
+    sStats.wrong++;
+    recordWrong(q);
+    const idx=['A','B','C','D'].indexOf(q.answer);
+    const allBtns=document.querySelectorAll('.opt-btn');
+    allBtns[idx].classList.add('reveal');
+    allBtns[idx].querySelector('.opt-label').textContent='✓';
+  }
+  recordAnswered(q, isOk);
+  const fb=document.getElementById('feedback');
+  fb.className='feedback show '+(isOk?'correct':'wrong');
+  document.getElementById('fb-title').textContent=isOk?'答對了！🎉':'答錯了 😢';
+  document.getElementById('fb-text').textContent=q.analysis||(isOk?'繼續保持！':'正確答案是 ('+q.answer+') '+q['option_'+q.answer.toLowerCase()]);
+  const hintEl=document.getElementById('fb-hint');
+  if(q.hint){ hintEl.textContent='💡 '+q.hint; hintEl.style.display=''; }
+  else hintEl.style.display='none';
+  document.getElementById('btn-skip').style.display='none';
+  document.getElementById('btn-next').style.display='';
+  updateBadge();
+}
+function skipQ() { if(isAnswered) return; sStats.skip++; nextQ(); }
+function nextQ() { curIdx++; if(curIdx>=sessionQ.length) endQuiz(); else renderQ(); }
+function endQuiz() {
+  if(timerRef){ clearInterval(timerRef); timerRef=null; }
+  const total=sessionQ.length;
+  const pct=total>0?Math.round(sStats.correct/total*100):0;
+  let grade='F',title='再加油！';
+  if(pct>=95){grade='S';title='完美！神乎其技！';}
+  else if(pct>=85){grade='A';title='優秀！繼續保持！';}
+  else if(pct>=70){grade='B';title='不錯！還有進步空間！';}
+  else if(pct>=55){grade='C';title='及格！再努力一些！';}
+  else if(pct>=40){grade='D';title='需要多加練習！';}
+  document.getElementById('result-grade').textContent=grade;
+  document.getElementById('result-pct').textContent='正確率 '+pct+'%';
+  document.getElementById('result-title').textContent=title;
+  document.getElementById('result-sub').textContent=sStats.correct+' 對 · '+sStats.wrong+' 錯 · '+sStats.skip+' 跳過';
+  document.getElementById('res-correct').textContent=sStats.correct;
+  document.getElementById('res-wrong').textContent=sStats.wrong;
+  document.getElementById('res-skip').textContent=sStats.skip;
+  showScreen('result'); updateSetupStats();
+}
+function confirmBack() {
+  if(!isAnswered||curIdx===0||confirm('確定要離開測驗？')){
+    if(timerRef){ clearInterval(timerRef); timerRef=null; }
+    showScreen('setup');
+  }
+}
+
+// ── Records ───────────────────────────────
+function recordWrong(q) {
+  const wb=loadWrong(), id=compId(q), today=new Date().toLocaleDateString('zh-TW');
+  if(!wb[id]) wb[id]={count:0,lastDate:'',q};
+  wb[id].count++; wb[id].lastDate=today; wb[id].q=q;
+  saveWrong(wb);
+}
+function recordAnswered(q, isOk) {
+  const log=loadAnswered(), id=compId(q), today=new Date().toLocaleDateString('zh-TW');
+  if(!log[id]) log[id]={correct:0,wrong:0,lastDate:''};
+  if(isOk) log[id].correct++; else log[id].wrong++;
+  log[id].lastDate=today;
+  saveAnswered(log);
+}
+function updateBadge() {
+  const cnt=Object.keys(loadWrong()).length;
+  const el=document.getElementById('wrongBadge');
+  if(cnt>0){ el.style.display=''; el.textContent=cnt>99?'99+':cnt; }
+  else el.style.display='none';
+}
+
+// ── Reset ─────────────────────────────────
+function resetAnswered() {
+  if(!confirm('確定要清除所有答題紀錄嗎？\n（錯題本不受影響，題庫保留）')) return;
+  // 掃描所有 key，刪除答題相關的
+  const toDelete = [];
+  for(let i=0; i<localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if(k && (k.includes('answer') || k.includes('Answer') || k.includes('answered'))) toDelete.push(k);
+  }
+  toDelete.forEach(k => localStorage.removeItem(k));
+  console.log('Cleared answered keys:', toDelete);
+  updateBadge(); updateSetupStats(); updateAvail();
+  alert('✅ 已清除答題紀錄（清除了 '+toDelete.length+' 筆），所有題目重新視為「未答過」！');
+}
+function resetAll() {
+  if(!confirm('確定要全部重置嗎？\n答題紀錄和錯題本都會清空。\n（題庫資料保留）')) return;
+  // 清除此頁面所有 localStorage（保留題庫 extra）
+  const extra = localStorage.getItem(KEY_EXTRA);
+  localStorage.clear();
+  if(extra) localStorage.setItem(KEY_EXTRA, extra);
+  console.log('All localStorage cleared, extra preserved:', !!extra);
+  updateBadge(); updateSetupStats(); updateAvail();
+  alert('✅ 已全部重置！可以全新開始了。');
+}
+
+// ── Wrong book ────────────────────────────
+function renderWB() {
+  const wb=loadWrong();
+  const items=Object.values(wb).sort((a,b)=>b.count-a.count);
+  const list=document.getElementById('wb-list');
+  if(!items.length){
+    list.innerHTML='<div class="wb-empty"><div class="wb-empty-icon">🎉</div><div>錯題本是空的！繼續加油！</div></div>';
+    return;
+  }
+  list.innerHTML=items.map(({count,lastDate,q})=>`
+    <div class="wb-item">
+      <div class="wb-item-top">
+        <div class="wb-badge"><span class="wb-badge-n">${count}</span><span class="wb-badge-l">次</span></div>
+        <div style="flex:1">
+          <div class="wb-q-text">${q.question}</div>
+          <div class="wb-meta">${q.subject} · ${q.grade} · ${q.exam} · ${q.unit} · 最後：${lastDate}</div>
+        </div>
+      </div>
+      <div class="wb-options">
+        ${['A','B','C','D'].map(l=>`<div class="wb-opt${q.answer===l?' correct-opt':''}"><span class="wb-opt-label">${l}</span><span>${q['option_'+l.toLowerCase()]}${q.answer===l?' ✓':''}</span></div>`).join('')}
+      </div>
+      ${q.analysis?`<div class="wb-analysis">📖 ${q.analysis}</div>`:''}
+    </div>`).join('');
+}
+function clearWrongBook() {
+  if(!confirm('確定要清除所有錯題紀錄嗎？')) return;
+  localStorage.removeItem(KEY_WRONG);
+  updateBadge(); renderWB(); updateSetupStats();
+}
+function exportWrongXLSX() {
+  const wb_data=loadWrong();
+  const items=Object.values(wb_data);
+  if(!items.length){ alert('錯題本是空的！'); return; }
+  const rows=items.map(({count,lastDate,q})=>({'科目':q.subject,'年級':q.grade,'段考':q.exam,'單元':q.unit,'題目':q.question,'選項A':q.option_a,'選項B':q.option_b,'選項C':q.option_c,'選項D':q.option_d,'答案':q.answer,'解析':q.analysis,'錯誤次數':count,'最後錯誤日期':lastDate}));
+  const ws=XLSX.utils.json_to_sheet(rows);
+  ws['!cols']=[8,8,10,8,40,14,14,14,14,6,24,10,14].map(w=>({wch:w}));
+  const wb2=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb2,ws,'錯題本');
+  XLSX.writeFile(wb2,'錯題本_'+new Date().toLocaleDateString('zh-TW').replace(/\//g,'-')+'.xlsx');
+}
+
+// ── Upload ────────────────────────────────
+function setUploadMode(m, btn) {
+  uploadMode=m;
+  document.querySelectorAll('.upload-mode-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+function handleUpload(input) {
+  const file=input.files[0]; if(!file) return;
+  const msg=document.getElementById('uploadMsg');
+  msg.textContent='讀取中...'; msg.className='upload-msg';
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try {
+      const wb=XLSX.read(e.target.result,{type:'binary'});
+      const required=['科目','年級','段考','單元','題目','選項A','選項B','選項C','選項D','答案'];
+      let newRows=[], sheets=0;
+      wb.SheetNames.forEach(sheetName=>{
+        const ws=wb.Sheets[sheetName];
+        const data=XLSX.utils.sheet_to_json(ws,{defval:''});
+        if(!data.length) return;
+        const cols=Object.keys(data[0]);
+        const missing=required.filter(r=>!cols.includes(r));
+        if(missing.length) throw new Error('Sheet「'+sheetName+'」缺少欄位：'+missing.join('、'));
+        data.forEach((row,i)=>{
+          newRows.push({
+            no:String(row['編號']||i+1),subject:String(row['科目']||sheetName),
+            grade:String(row['年級']||''),exam:String(row['段考']||''),unit:String(row['單元']||''),
+            source:String(row['來源']||''),question:String(row['題目']||''),
+            option_a:String(row['選項A']||''),option_b:String(row['選項B']||''),
+            option_c:String(row['選項C']||''),option_d:String(row['選項D']||''),
+            answer:String(row['答案']||''),analysis:String(row['解析']||''),hint:String(row['提示']||''),
+          });
+        });
+        sheets++;
+      });
+      if(!newRows.length) throw new Error('沒有讀取到任何題目');
+      const builtinIds=new Set(BUILTIN_DB.map(q=>compId(q)));
+      if(uploadMode==='replace') {
+        localStorage.removeItem(KEY_WRONG);
+        localStorage.removeItem(KEY_ANSWERED);
+        const extras=newRows.filter(q=>!builtinIds.has(compId(q)));
+        saveExtra(extras);
+        msg.textContent='✅ 替換完成：載入 '+newRows.length+' 題（'+sheets+' 個 Sheet）';
+      } else {
+        const existExtra=loadExtra();
+        const existIds=new Set([...BUILTIN_DB,...existExtra].map(q=>compId(q)));
+        const addOnes=newRows.filter(q=>!existIds.has(compId(q)));
+        saveExtra([...existExtra,...addOnes]);
+        msg.textContent='✅ 合併完成：新增 '+addOnes.length+' 題';
+      }
+      msg.className='upload-msg ok';
+      init();
+    } catch(err) {
+      msg.textContent='❌ '+err.message;
+      msg.className='upload-msg err';
+    }
+    input.value='';
+  };
+  reader.readAsBinaryString(file);
+}
+
+// ── Screen ────────────────────────────────
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+  if(name==='wrongbook') renderWB();
+  if(name==='setup') { updateAvail(); updateSetupStats(); }
+  if(name!=='quiz'&&timerRef) { clearInterval(timerRef); timerRef=null; }
+}
+
+// ── Boot ──────────────────────────────────
+init();
+</script>
+</body>
+</html>
